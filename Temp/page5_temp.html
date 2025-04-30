@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Cartoonish River Crossing Simulator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap');
+    
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Bubblegum Sans', cursive;
+    }
+    
+    #loading {
+      display: none;
+    }
+    
+    #ui-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 15px 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      color: #333;
+      max-width: 300px;
+      border: 3px solid #4a90e2;
+      z-index: 10;
+    }
+    
+    h1 {
+      margin: 0 0 15px 0;
+      color: #ff6b6b;
+      font-size: 24px;
+      text-align: center;
+      text-shadow: 1px 1px 0 #fff;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+      background: rgba(255, 255, 255, 0.6);
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px dashed #FFB347;
+    }
+    
+    .slider-container {
+      margin-bottom: 12px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 16px;
+      color: #2c3e50;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 15px;
+      border-radius: 5px;
+      background: #d7dcdf;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: #4a90e2;
+      cursor: pointer;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    
+    .value-display {
+      font-weight: bold;
+      color: #2980b9;
+      font-size: 16px;
+    }
+    
+    #reset-btn {
+      background: #ff6b6b;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 20px;
+      color: white;
+      font-family: 'Bubblegum Sans', cursive;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: block;
+      margin: 0 auto;
+    }
+    
+    #reset-btn:hover {
+      background: #ff5252;
+      transform: scale(1.05);
+    }
+    
+    #info-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border: 3px solid #6bd098;
+      color: #333;
+      font-size: 14px;
+      z-index: 10;
+    }
+
+    #explanation {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      border: 3px solid #6bd098;
+      color: #333;
+      max-width: 300px;
+      font-size: 14px;
+      z-index: 10;
+    }
+    
+    .info-row {
+      margin-bottom: 5px;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    
+    .toggle-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #4a90e2;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui-container">
+    <button class="toggle-btn" id="toggle-ui">−</button>
+    <div id="controls-content">
+      <h1>River Crossing Simulator</h1>
+      
+      <div class="control-group">
+        <div class="slider-container">
+          <label for="river-speed">River Speed</label>
+          <input type="range" id="river-speed" min="0" max="10" step="0.1" value="3">
+          <div>Current: <span id="river-speed-value" class="value-display">3.0</span> m/s</div>
+        </div>
+        
+        <div class="slider-container">
+          <label for="boat-speed">Boat Speed</label>
+          <input type="range" id="boat-speed" min="0" max="10" step="0.1" value="4">
+          <div>Current: <span id="boat-speed-value" class="value-display">4.0</span> m/s</div>
+        </div>
+        
+        <div class="slider-container">
+          <label for="boat-angle">Boat Angle</label>
+          <input type="range" id="boat-angle" min="-90" max="90" step="1" value="0">
+          <div>Current: <span id="boat-angle-value" class="value-display">0</span>°</div>
+        </div>
+      </div>
+      
+      <button id="reset-btn">Reset Simulation</button>
+    </div>
+  </div>
+  
+  <div id="info-panel">
+    <div class="info-row"><span class="info-label">Actual Path:</span> <span id="actual-path">Straight</span></div>
+    <div class="info-row"><span class="info-label">Time Elapsed:</span> <span id="time-elapsed">0.0</span> seconds</div>
+    <div class="info-row"><span class="info-label">Distance Traveled:</span> <span id="distance-traveled">0.0</span> m</div>
+  </div>
+
+  <div id="explanation">
+    <h3 style="margin-top: 0;">Relative Motion</h3>
+    <p>This simulator demonstrates how a boat's motion combines with the river current. The boat aims in one direction, but the river carries it sideways, resulting in a diagonal path.</p>
+    <p>Try different angles to see how to cross the river in a straight line!</p>
+  </div>
+
+  <!-- Three.js Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.6.1/gsap.min.js"></script>
+
+  <script>
+    // Scene initialization
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+    scene.fog = new THREE.FogExp2(0x87CEEB, 0.002);
+
+    // Camera setup
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0, 100, 200);
+    camera.lookAt(0, 0, 0);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(100, 200, 100);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.camera.left = -100;
+    directionalLight.shadow.camera.right = 100;
+    directionalLight.shadow.camera.top = 100;
+    directionalLight.shadow.camera.bottom = -100;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    scene.add(directionalLight);
+
+    // Create a proper shore for both sides of the river
+    function createShore(width, length, posX) {
+      const shoreGroup = new THREE.Group();
+      
+      // Main ground
+      const groundGeo = new THREE.PlaneGeometry(width, length);
+      const groundMat = new THREE.MeshLambertMaterial({ 
+        color: 0xCDAD78,
+        roughness: 0.8
+      });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.set(posX, 0, 0);
+      ground.receiveShadow = true;
+      shoreGroup.add(ground);
+      
+      // Add grass patches
+      for (let i = 0; i < 100; i++) {
+        const grassPatchGeo = new THREE.CircleGeometry(Math.random() * 15 + 5, 8);
+        const grassPatchMat = new THREE.MeshLambertMaterial({ 
+          color: new THREE.Color().setHSL(0.3, 0.8, Math.random() * 0.3 + 0.3) 
+        });
+        const grassPatch = new THREE.Mesh(grassPatchGeo, grassPatchMat);
+        grassPatch.rotation.x = -Math.PI / 2;
+        
+        const xRange = width/2 - 20;
+        const zRange = length/2 - 20;
+        grassPatch.position.set(
+          posX + (Math.random() * xRange * 2 - xRange),
+          0.1,
+          Math.random() * zRange * 2 - zRange
+        );
+        shoreGroup.add(grassPatch);
+      }
+      
+      // Add some trees
+      for (let i = 0; i < 10; i++) {
+        const tree = createTree();
+        const xRange = width/2 - 30;
+        const zRange = length/2 - 30;
+        tree.position.set(
+          posX + (Math.random() * xRange * 2 - xRange),
+          0,
+          Math.random() * zRange * 2 - zRange
+        );
+        shoreGroup.add(tree);
+      }
+      
+      return shoreGroup;
+    }
+
+    // Create a cartoon tree
+    function createTree() {
+      const treeGroup = new THREE.Group();
+      
+      // Trunk
+      const trunkGeo = new THREE.CylinderGeometry(2, 5, 20, 8);
+      const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.position.y = 10;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      treeGroup.add(trunk);
+      
+      // Foliage (3 layers)
+      const foliageColors = [0x2E8B57, 0x3CB371, 0x32CD32];
+      for (let i = 0; i < 3; i++) {
+        const foliageGeo = new THREE.ConeGeometry(15 - i * 3, 20, 8);
+        const foliageMat = new THREE.MeshLambertMaterial({ color: foliageColors[i] });
+        const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+        foliage.position.y = 25 + i * 10;
+        foliage.castShadow = true;
+        treeGroup.add(foliage);
+      }
+      
+      return treeGroup;
+    }
+
+    // Create cartoon rocks
+    function createRock(size) {
+      const rockGeo = new THREE.DodecahedronGeometry(size, 0);
+      const rockMat = new THREE.MeshLambertMaterial({ 
+        color: 0x808080,
+        flatShading: true
+      });
+      const rock = new THREE.Mesh(rockGeo, rockMat);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      
+      // Randomize rotation for natural look
+      rock.rotation.x = Math.random() * Math.PI;
+      rock.rotation.y = Math.random() * Math.PI;
+      rock.rotation.z = Math.random() * Math.PI;
+      
+      // Slightly flatten the rock
+      rock.scale.y = 0.7;
+      
+      return rock;
+    }
+
+    // Create shorelines
+    const leftShore = createShore(200, 1000, -250);
+    scene.add(leftShore);
+    
+    const rightShore = createShore(200, 1000, 250);
+    scene.add(rightShore);
+
+    // Add some rocks near the shore
+    for (let i = 0; i < 20; i++) {
+      const rock = createRock(Math.random() * 5 + 3);
+      const side = Math.random() > 0.5 ? 1 : -1;
+      rock.position.set(
+        side * (150 + Math.random() * 20),
+        -2 + Math.random() * 2,
+        Math.random() * 800 - 400
+      );
+      scene.add(rock);
+    }
+
+    // Create cartoon water
+    const waterWidth = 300;
+    const waterLength = 1000;
+    const waterSegments = 50;
+    
+    const waterGeometry = new THREE.PlaneGeometry(
+      waterWidth, waterLength, 
+      Math.floor(waterWidth/5), Math.floor(waterLength/10)
+    );
+    
+    const waterMaterial = new THREE.MeshPhongMaterial({
+      color: 0x4A9BDC,
+      transparent: true,
+      opacity: 0.8,
+      shininess: 100,
+      flatShading: false
+    });
+    
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = 0;
+    scene.add(water);
+
+    // Create ripple effect for the water
+    function updateWaves(time, speed) {S
+      const vertices = water.geometry.attributes.position.array;
+      for (let i = 0; i < vertices.length; i += 3) {
+        // We only modify the z component (up/down)
+        vertices[i+2] = Math.sin((vertices[i] + time * speed * 5) * 0.05) * 2 +
+                         Math.cos((vertices[i+1] + time * speed * 5) * 0.05) * 2;
+      }
+      water.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Path Tracker - shows the actual path of boat
+    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 3 });
+    const pathGeometry = new THREE.BufferGeometry();
+    const pathPositions = new Float32Array(1000 * 3); // Allocate space for 1000 points
+    pathGeometry.setAttribute('position', new THREE.BufferAttribute(pathPositions, 3));
+    pathGeometry.setDrawRange(0, 0);
+    const pathLine = new THREE.Line(pathGeometry, pathMaterial);
+    scene.add(pathLine);
+
+    // Current position in the path line
+    let pathIndex = 0;
+
+    // Target destination indicator
+    const targetGeo = new THREE.CylinderGeometry(0, 10, 20, 8);
+    const targetMat = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+    const targetIndicator = new THREE.Mesh(targetGeo, targetMat);
+    targetIndicator.position.set(250, 10, 0);
+    targetIndicator.castShadow = true;
+    scene.add(targetIndicator);
+
+    // Create cartoon boat
+    function createCartoonBoat() {
+      const boatGroup = new THREE.Group();
+      
+      // Hull - base shape
+      const hullShape = new THREE.Shape();
+      hullShape.moveTo(-15, 0);
+      hullShape.lineTo(-10, -5);
+      hullShape.lineTo(15, -5);
+      hullShape.lineTo(20, 0);
+      hullShape.lineTo(-15, 0);
+      
+      const extrudeSettings = {
+        steps: 1,
+        depth: 10,
+        bevelEnabled: true,
+        bevelThickness: 2,
+        bevelSize: 2,
+        bevelSegments: 3
+      };
+      
+      const hullGeo = new THREE.ExtrudeGeometry(hullShape, extrudeSettings);
+      const hullMat = new THREE.MeshLambertMaterial({ color: 0xFF5722 });
+      const hull = new THREE.Mesh(hullGeo, hullMat);
+      hull.rotation.x = Math.PI / 2;
+      hull.position.set(0, -2, -5);
+      hull.castShadow = true;
+      hull.receiveShadow = true;
+      boatGroup.add(hull);
+      
+      // Cabin
+      const cabinGeo = new THREE.BoxGeometry(15, 6, 8);
+      const cabinMat = new THREE.MeshLambertMaterial({ color: 0x2196F3 });
+      const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+      cabin.position.set(-2, 3, 0);
+      cabin.castShadow = true;
+      cabin.receiveShadow = true;
+      boatGroup.add(cabin);
+      
+      // Windows
+      const windowMat = new THREE.MeshPhongMaterial({ color: 0xFFFFFF, shininess: 100 });
+      
+      const frontWindowGeo = new THREE.PlaneGeometry(4, 3);
+      const frontWindow = new THREE.Mesh(frontWindowGeo, windowMat);
+      frontWindow.position.set(5.51, 3, 0);
+      frontWindow.rotation.y = Math.PI / 2;
+      boatGroup.add(frontWindow);
+      
+      const sideWindow1 = new THREE.Mesh(new THREE.PlaneGeometry(3, 2), windowMat);
+      sideWindow1.position.set(-2, 3, 4.01);
+      boatGroup.add(sideWindow1);
+      
+      const sideWindow2 = new THREE.Mesh(new THREE.PlaneGeometry(3, 2), windowMat);
+      sideWindow2.position.set(-2, 3, -4.01);
+      sideWindow2.rotation.y = Math.PI;
+      boatGroup.add(sideWindow2);
+      
+      // Little flag on top
+      const flagpoleGeo = new THREE.CylinderGeometry(0.3, 0.3, 8, 8);
+      const flagpoleMat = new THREE.MeshLambertMaterial({ color: 0xBDBDBD });
+      const flagpole = new THREE.Mesh(flagpoleGeo, flagpoleMat);
+      flagpole.position.set(0, 10, 0);
+      flagpole.castShadow = true;
+      boatGroup.add(flagpole);
+      
+      const flagGeo = new THREE.PlaneGeometry(5, 3);
+      const flagMat = new THREE.MeshLambertMaterial({ 
+        color: 0xFF9800, 
+        side: THREE.DoubleSide 
+      });
+      const flag = new THREE.Mesh(flagGeo, flagMat);
+      flag.position.set(2.5, 12, 0);
+      flag.castShadow = true;
+      boatGroup.add(flag);
+      
+      // Propeller at the back
+      const propellerGeo = new THREE.CylinderGeometry(2, 2, 0.5, 16);
+      const propellerMat = new THREE.MeshLambertMaterial({ color: 0x424242 });
+      const propeller = new THREE.Mesh(propellerGeo, propellerMat);
+      propeller.position.set(-15, 0, 0);
+      propeller.rotation.z = Math.PI / 2;
+      propeller.castShadow = true;
+      boatGroup.add(propeller);
+      
+      // Propeller blades
+      for (let i = 0; i < 3; i++) {
+        const bladeGeo = new THREE.BoxGeometry(5, 1, 0.5);
+        const blade = new THREE.Mesh(bladeGeo, propellerMat);
+        blade.position.set(-18, 0, 0);
+        blade.rotation.y = i * Math.PI * 2 / 3;
+        propeller.add(blade);
+      }
+      
+      // Add a cartoon-style character (simple)
+      const characterGroup = new THREE.Group();
+      
+      // Body
+      const bodyGeo = new THREE.CylinderGeometry(1, 1.5, 4, 8);
+      const bodyMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 2;
+      characterGroup.add(body);
+      
+      // Head
+      const headGeo = new THREE.SphereGeometry(1.2, 16, 16);
+      const headMat = new THREE.MeshLambertMaterial({ color: 0xFFE0B2 });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 5;
+      characterGroup.add(head);
+      
+      // Hat
+      const hatGeo = new THREE.ConeGeometry(1.5, 2, 8);
+      const hatMat = new THREE.MeshLambertMaterial({ color: 0xF44336 });
+      const hat = new THREE.Mesh(hatGeo, hatMat);
+      hat.position.y = 6.5;
+      characterGroup.add(hat);
+      
+      // Position character in the boat
+      characterGroup.position.set(0, 4, 0);
+      boatGroup.add(characterGroup);
+      
+      return boatGroup;
+    }
+
+    const boat = createCartoonBoat();
+    boat.position.set(-150, 5, 0); // Start on the left bank
+    scene.add(boat);
+
+    // Propeller animation
+    const propeller = boat.children[boat.children.length-2];
+    
+    // Create bank indicators (flags) for clarity
+    function createFlag(color, position) {
+      const flagGroup = new THREE.Group();
+      
+      const poleGeo = new THREE.CylinderGeometry(1, 1, 40, 8);
+      const poleMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+      const pole = new THREE.Mesh(poleGeo, poleMat);
+      pole.position.y = 20;
+      pole.castShadow = true;
+      flagGroup.add(pole);
+      
+      const flagGeo = new THREE.PlaneGeometry(15, 10);
+      const flagMat = new THREE.MeshLambertMaterial({ 
+        color: color, 
+        side: THREE.DoubleSide 
+      });
+      const flag = new THREE.Mesh(flagGeo, flagMat);
+      flag.position.set(7.5, 35, 0);
+      flag.castShadow = true;
+      flagGroup.add(flag);
+      
+      flagGroup.position.copy(position);
+      return flagGroup;
+    }
+
+    const startFlag = createFlag(0x4CAF50, new THREE.Vector3(-150, 0, 0));
+    scene.add(startFlag);
+    
+    const endFlag = createFlag(0xF44336, new THREE.Vector3(150, 0, 0));
+    scene.add(endFlag);
+
+    // Add labels for banks
+    function createTextLabel(text, position, size = 20) {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = 256;
+      canvas.height = 128;
+      
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      
+      context.font = '40px Bubblegum Sans, cursive';
+      context.fillStyle = '#333333';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(text, canvas.width/2, canvas.height/2);
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(material);
+      sprite.position.copy(position);
+      sprite.scale.set(size, size/2, 1);
+      
+      return sprite;
+    }
+
+    const startLabel = createTextLabel('Start Bank', new THREE.Vector3(-150, 50, 0));
+    scene.add(startLabel);
+    
+    const endLabel = createTextLabel('Finish Bank', new THREE.Vector3(150, 50, 0));
+    scene.add(endLabel);
+
+    // Create some simple clouds
+    function createCloud() {
+      const cloudGroup = new THREE.Group();
+      
+      const mainSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(15, 16, 16),
+        new THREE.MeshLambertMaterial({ color: 0xffffff })
+      );
+      cloudGroup.add(mainSphere);
+      
+      // Add more spheres to create fluffy look
+      const numPuffs = 6;
+      for (let i = 0; i < numPuffs; i++) {
+        const angle = (i / numPuffs) * Math.PI * 2;
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(10 + Math.random() * 5, 16, 16),
+          new THREE.MeshLambertMaterial({ color: 0xffffff })
+        );
+        puff.position.x = Math.cos(angle) * 10;
+        puff.position.z = Math.sin(angle) * 10;
+        puff.position.y = Math.random() * 5;
+        cloudGroup.add(puff);
+      }
+      
+      return cloudGroup;
+    }
+
+    // Add clouds to the scene
+    for (let i = 0; i < 10; i++) {
+      const cloud = createCloud();
+      cloud.position.set(
+        Math.random() * 1000 - 500,
+        100 + Math.random() * 50,
+        Math.random() * 500 - 250
+      );
+      scene.add(cloud);
+    }
+
+    // Simulation parameters
+    const params = {
+      riverSpeed: 3,
+      boatSpeed: 4,
+      boatAngle: 0
+    };
+
+    // UI Controls
+    const riverSpeedSlider = document.getElementById('river-speed');
+    const boatSpeedSlider = document.getElementById('boat-speed');
+    const boatAngleSlider = document.getElementById('boat-angle');
+    
+    const riverSpeedValue = document.getElementById('river-speed-value');
+    const boatSpeedValue = document.getElementById('boat-speed-value');
+    const boatAngleValue = document.getElementById('boat-angle-value');
+    
+    const resetBtn = document.getElementById('reset-btn');
+    const toggleUIBtn = document.getElementById('toggle-ui');
+    const controlsContent = document.getElementById('controls-content');
+    
+    // Update info displays
+    const actualPathDisplay = document.getElementById('actual-path');
+    const timeElapsedDisplay = document.getElementById('time-elapsed');
+    const distanceTraveledDisplay = document.getElementById('distance-traveled');
+
+    // Event listeners for sliders
+    riverSpeedSlider.addEventListener('input', () => {
+      params.riverSpeed = parseFloat(riverSpeedSlider.value);
+      riverSpeedValue.textContent = params.riverSpeed.toFixed(1);
+    });
+    
+    boatSpeedSlider.addEventListener('input', () => {
+      params.boatSpeed = parseFloat(boatSpeedSlider.value);
+      boatSpeedValue.textContent = params.boatSpeed.toFixed(1);
+    });
+    
+    boatAngleSlider.addEventListener('input', () => {
+      params.boatAngle = parseInt(boatAngleSlider.value);
+      boatAngleValue.textContent = params.boatAngle;
+    });
+    
+    // Reset simulation
+    resetBtn.addEventListener('click', () => {
+      // Reset boat position
+      boat.position.set(-150, 5, 0);
+      
+      // Reset path tracking
+      pathIndex = 0;
+      const positions = pathLine.geometry.attributes.position.array;
+      pathLine.geometry.setDrawRange(0, 0);
+      pathLine.geometry.attributes.position.needsUpdate = true;
+      
+      // Reset simulation time
+      startTime = Date.now();
+    });
+    
+    // Toggle UI
+    toggleUIBtn.addEventListener('click', () => {
+      if (controlsContent.style.display === 'none') {
+        controlsContent.style.display = 'block';
+        toggleUIBtn.textContent = '−';
+      } else {
+        controlsContent.style.display = 'none';
+        toggleUIBtn.textContent = '+';
+      }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Simulation state
+    let startTime = Date.now();
+    let lastTime = 0;
+    let distanceTraveled = 0;
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const currentTime = (Date.now() - startTime) / 1000;
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+      
+      // Update water ripples
+      updateWaves(currentTime, params.riverSpeed);
+      
+      // Calculate boat motion
+      const rad = THREE.Math.degToRad(params.boatAngle);
+      const vx = params.riverSpeed + params.boatSpeed * Math.sin(rad);
+      const vz = -params.boatSpeed * Math.cos(rad);
+      
+      // Update boat position
+      boat.position.x += vx * deltaTime;
+      boat.position.z += vz * deltaTime;
+      
+      // Boat bobbing effect
+      boat.position.y = 5 + Math.sin(currentTime * 2) * 0.5;
+      
+      // Boat orientation
+      boat.rotation.y = Math.atan2(vx, -vz);
+      
+      // Rotate propeller for effect
+      propeller.rotation.x += deltaTime * 10;
+      
+      // Update path tracker (add a point every 0.2 seconds)
+      if (currentTime > 0 && pathIndex < 1000 && Math.floor(currentTime * 5) > Math.floor((currentTime - deltaTime) * 5)) {
+        const positions = pathLine.geometry.attributes.position.array;
+        positions[pathIndex * 3] = boat.position.x;
+        positions[pathIndex * 3 + 1] = 1; // Slightly above ground
+        positions[pathIndex * 3 + 2] = boat.position.z;
+        
+        pathIndex++;
+        pathLine.geometry.setDrawRange(0, pathIndex);
+        pathLine.geometry.attributes.position.needsUpdate = true;
+      }
+      
+      // Update info displays
+      // Calculate path angle relative to straight
+      const pathAngle = Math.atan2(vz, vx) * 180 / Math.PI;
+      let pathDescription = "Diagonal";
+      
+      if (Math.abs(pathAngle) < 5) {
+        pathDescription = "Straight across";
+      } else if (pathAngle > 45) {
+        pathDescription = "Upstream diagonal";
+      } else if (pathAngle < -45) {
+        pathDescription = "Downstream diagonal";
+      } else if (Math.abs(pathAngle - 90) < 5) {
+        pathDescription = "Directly upstream";
+      } else if (Math.abs(pathAngle + 90) < 5) {
+        pathDescription = "Directly downstream";
+      }
+      
+      actualPathDisplay.textContent = pathDescription;
+      timeElapsedDisplay.textContent = currentTime.toFixed(1);
+      
+      // Calculate distance traveled
+      distanceTraveled += Math.sqrt(vx * vx + vz * vz) * deltaTime;
+      distanceTraveledDisplay.textContent = distanceTraveled.toFixed(1);
+      
+      renderer.render(scene, camera);
+    }
+
+    // Create orbital camera controls for better viewing
+    const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+    orbitControls.enableDamping = true;
+    orbitControls.dampingFactor = 0.05;
+    orbitControls.screenSpacePanning = false;
+    orbitControls.minDistance = 50;
+    orbitControls.maxDistance = 500;
+    orbitControls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent going below ground
+    
+    // Add camera-follow-boat toggle
+    let followBoat = true;
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'f' || event.key === 'F') {
+        followBoat = !followBoat;
+      }
+    });
+    
+    // Set up different camera views
+    function setupCameraViews() {
+      // Top view (default)
+      if (followBoat) {
+        // Make camera follow boat from a distance
+        const cameraTarget = new THREE.Vector3(
+          boat.position.x + 50,
+          boat.position.y + 100,
+          boat.position.z + 50
+        );
+        
+        camera.position.lerp(cameraTarget, 0.05);
+        orbitControls.target.lerp(boat.position, 0.05);
+      }
+      
+      orbitControls.update();
+    }
+    
+    // Begin animation
+    animate();
+    
+    // Initial UI setup
+    riverSpeedSlider.value = params.riverSpeed;
+    boatSpeedSlider.value = params.boatSpeed;
+    boatAngleSlider.value = params.boatAngle;
+    
+    riverSpeedValue.textContent = params.riverSpeed.toFixed(1);
+    boatSpeedValue.textContent = params.boatSpeed.toFixed(1);
+    boatAngleValue.textContent = params.boatAngle;
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+</script>
+</body>
+</html>

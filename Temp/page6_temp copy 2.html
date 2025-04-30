@@ -154,7 +154,7 @@
         const treeGroup = new THREE.Group();
         
         // Create multiple trees
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 90; i++) {
             const treeHeight = 2 + Math.random() * 3;
             const tree = new THREE.Group();
             
@@ -1272,7 +1272,8 @@ for (let i = 0; i < 20; i++) {
         });
         
         gui.add(params, 'gravity', 0.1, 20).name('Gravity (m/s²)').onChange(updateTrajectoryLine);
-        gui.add(params, 'airResistance', 0, 0.5).name('Air Resistance');
+        gui.add(params, 'airResistance', 0, 0.5).step(0.01).name('Air Resistance');
+
         
         const displayFolder = gui.addFolder('Display Options');
         displayFolder.add(params, 'showVectors').name('Show Vectors').onChange(function(value) {

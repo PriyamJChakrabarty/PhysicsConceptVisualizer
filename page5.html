@@ -447,206 +447,113 @@
                 ctx.lineTo(waveX, waveY);
               }
             }
-          }
-          ctx.stroke();
+
+
+            // Calculate boat angle based on resultant velocity
+            const boatRadians = params.boatAngle * Math.PI / 180;
+            const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
+            const vy = -params.boatSpeed * Math.cos(boatRadians);
+            const resultantAngle = Math.atan2(vy, vx);
+
+            // Draw boat
+            ctx.save();
+            ctx.translate(boat.x, boat.y);
+            ctx.rotate(-resultantAngle - Math.PI / 2); // Rotate to face direction of motion
+
+            // Boat shape (3D effect with even larger size)
+            ctx.beginPath();
+            ctx.moveTo(0, -50); // Larger size for maximum visibility
+            ctx.lineTo(25, 0); // Front side
+            ctx.lineTo(25, 75); // Right side
+            ctx.lineTo(-25, 75); // Left side
+            ctx.lineTo(-25, 0); // Back side
+            ctx.closePath();
+            ctx.fillStyle = colors.boat;
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Add 3D shading
+            ctx.beginPath();
+            ctx.moveTo(0, -50);
+            ctx.lineTo(25, 0);
+            ctx.lineTo(0, 25);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Shadow effect
+            ctx.fill();
+
+            ctx.restore();
+
+            // Draw velocity vectors
+            if (params.showVectors && !boat.stopped) {
+                drawVelocityVectors();
+            }
         }
-      }
-
-      // Draw compass
-      function drawCompass() {
-        const compassRadius = 40;
-        const compassX = 80;
-        const compassY = 80;
-
-        // Draw compass circle
-        ctx.beginPath();
-        ctx.arc(compassX, compassY, compassRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.fill();
-        ctx.strokeStyle = "#333";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Draw compass directions
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = "#333";
-        ctx.font = "16px Arial";
-
-        ctx.fillText("N", compassX, compassY - compassRadius + 15);
-        ctx.fillText("S", compassX, compassY + compassRadius - 15);
-        ctx.fillText("E", compassX + compassRadius - 15, compassY);
-        ctx.fillText("W", compassX - compassRadius + 15, compassY);
-
-        // Draw compass needle
-        ctx.beginPath();
-        ctx.moveTo(compassX, compassY);
-        ctx.lineTo(compassX, compassY - compassRadius + 10);
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(compassX, compassY);
-        ctx.lineTo(compassX, compassY + compassRadius - 10);
-        ctx.strokeStyle = "#333";
-        ctx.stroke();
-      }
-
-      // Draw boat
-      function drawBoat() {
-        // Draw path
-        if (boat.path.length > 1) {
-          ctx.beginPath();
-          ctx.moveTo(boat.path[0].x, boat.path[0].y);
-          for (let i = 1; i < boat.path.length; i++) {
-            ctx.lineTo(boat.path[i].x, boat.path[i].y);
-          }
-          ctx.strokeStyle = colors.path;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-
-        // Calculate boat angle based on resultant velocity
-        const boatRadians = (params.boatAngle * Math.PI) / 180;
-        const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
-        const vy = -params.boatSpeed * Math.cos(boatRadians);
-        const resultantAngle = Math.atan2(vy, vx);
-
-        // Draw boat
-        ctx.save();
-        ctx.translate(boat.x, boat.y);
-        ctx.rotate(-resultantAngle - Math.PI / 2); // Rotate to face direction of motion
-
-        // Boat shape (3D effect with even larger size)
-        ctx.beginPath();
-        ctx.moveTo(0, -50); // Larger size for maximum visibility
-        ctx.lineTo(25, 0); // Front side
-        ctx.lineTo(25, 75); // Right side
-        ctx.lineTo(-25, 75); // Left side
-        ctx.lineTo(-25, 0); // Back side
-        ctx.closePath();
-        ctx.fillStyle = colors.boat;
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Add 3D shading
-        ctx.beginPath();
-        ctx.moveTo(0, -50);
-        ctx.lineTo(25, 0);
-        ctx.lineTo(0, 25);
-        ctx.closePath();
-        ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; // Shadow effect
-        ctx.fill();
-
-        ctx.restore();
-
+        
         // Draw velocity vectors
-        if (params.showVectors && !boat.stopped) {
-          drawVelocityVectors();
+        function drawVelocityVectors() {
+            const boatRadians = params.boatAngle * Math.PI / 180;
+            const scale = 20; // Increased scale for better visibility
+
+            // Boat velocity relative to river (v_B→R)
+            const boatVx = params.boatSpeed * Math.sin(boatRadians) * scale;
+            const boatVy = -params.boatSpeed * Math.cos(boatRadians) * scale;
+
+            // River velocity relative to earth (v_R→E)
+            const riverVx = params.riverSpeed * scale;
+            const riverVy = 0;
+
+            // Resultant velocity (v_B→E)
+            const resultantVx = boatVx + riverVx;
+            const resultantVy = boatVy + riverVy;
+
+            // Draw boat velocity vector
+            drawArrow(boat.x, boat.y, boat.x + boatVx, boat.y + boatVy, '#000000', "v_B→R"); // Black
+
+            // Draw river velocity vector
+            drawArrow(boat.x, boat.y, boat.x + riverVx, boat.y + riverVy, '#FFFF00', "v_R→E"); // Yellow
+
+            // Draw resultant velocity vector if enabled
+            if (params.showResultant) {
+                drawArrow(boat.x, boat.y, boat.x + resultantVx, boat.y + resultantVy, '#9400D3', "v_B→E"); // Dark violet
+            }
         }
-      }
 
-      // Draw velocity vectors
-      function drawVelocityVectors() {
-        const boatRadians = (params.boatAngle * Math.PI) / 180;
-        const scale = 10; // Scale for better visualization
+        function drawArrow(fromX, fromY, toX, toY, color, label) {
+            const headSize = 15; // Increased arrowhead size
+            const angle = Math.atan2(toY - fromY, toX - fromX);
 
-        // Boat velocity relative to river (v_B→R)
-        const boatVx = params.boatSpeed * Math.sin(boatRadians) * scale;
-        const boatVy = -params.boatSpeed * Math.cos(boatRadians) * scale;
+            // Draw line
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4; // Increased line width
+            ctx.stroke();
 
-        // River velocity relative to earth (v_R→E)
-        const riverVx = params.riverSpeed * scale;
-        const riverVy = 0;
+            // Draw arrowhead
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(
+                toX - headSize * Math.cos(angle - Math.PI / 6),
+                toY - headSize * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                toX - headSize * Math.cos(angle + Math.PI / 6),
+                toY - headSize * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
 
-        // Resultant velocity (v_B→E)
-        const resultantVx = boatVx + riverVx;
-        const resultantVy = boatVy + riverVy;
-
-        // Draw boat velocity vector
-        drawArrow(
-          boat.x,
-          boat.y,
-          boat.x + boatVx,
-          boat.y + boatVy,
-          colors.boatVector,
-          "v_B→R"
-        );
-
-        // Draw river velocity vector
-        drawArrow(
-          boat.x,
-          boat.y,
-          boat.x + riverVx,
-          boat.y + riverVy,
-          colors.riverVector,
-          "v_R→E"
-        );
-
-        // Draw resultant velocity vector if enabled
-        if (params.showResultant) {
-          drawArrow(
-            boat.x,
-            boat.y,
-            boat.x + resultantVx,
-            boat.y + resultantVy,
-            colors.resultantVector,
-            "v_B→E"
-          );
+            // Draw label
+            ctx.fillStyle = color;
+            ctx.font = '16px Arial'; // Slightly larger font
+            ctx.textAlign = 'center';
+            ctx.fillText(label, toX + 20, toY - 10); // Adjusted label position to avoid overlap
         }
-      }
-
-      // Helper function to draw arrows with labels
-      function drawArrow(fromX, fromY, toX, toY, color, label) {
-        const headSize = 10;
-        const angle = Math.atan2(toY - fromY, toX - fromX);
-
-        // Draw line
-        ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        // Draw arrowhead
-        ctx.beginPath();
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(
-          toX - headSize * Math.cos(angle - Math.PI / 6),
-          toY - headSize * Math.sin(angle - Math.PI / 6)
-        );
-        ctx.lineTo(
-          toX - headSize * Math.cos(angle + Math.PI / 6),
-          toY - headSize * Math.sin(angle + Math.PI / 6)
-        );
-        ctx.closePath();
-        ctx.fillStyle = color;
-        ctx.fill();
-
-        // Draw label
-        ctx.fillStyle = color;
-        ctx.font = "14px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(label, (fromX + toX) / 2 + 15, (fromY + toY) / 2 + 15);
-      }
-
-      // Update boat position
-      function updateBoat(deltaTime) {
-        if (params.paused || boat.stopped) return;
-
-        // Convert boat angle to radians
-        const boatRadians = (params.boatAngle * Math.PI) / 180;
-
-        // Calculate velocity components
-        // Note: Canvas y-axis is inverted (down is positive)
-        const vx =
-          (params.riverSpeed + params.boatSpeed * Math.sin(boatRadians)) *
-          params.timeScale;
-        const vy = -params.boatSpeed * Math.cos(boatRadians) * params.timeScale;
+        
 
         // Update boat position
         boat.x += vx * deltaTime * params.pixelsPerMeter;
