@@ -445,34 +445,43 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
-            
+
             // Calculate boat angle based on resultant velocity
             const boatRadians = params.boatAngle * Math.PI / 180;
             const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
             const vy = -params.boatSpeed * Math.cos(boatRadians);
             const resultantAngle = Math.atan2(vy, vx);
-            
+
             // Draw boat
             ctx.save();
             ctx.translate(boat.x, boat.y);
             ctx.rotate(-resultantAngle - Math.PI / 2); // Rotate to face direction of motion
-            
-            // Boat shape
+
+            // Boat shape (3D effect with even larger size)
             ctx.beginPath();
-            ctx.moveTo(0, -10);
-            ctx.lineTo(5, 0);
-            ctx.lineTo(5, 15);
-            ctx.lineTo(-5, 15);
-            ctx.lineTo(-5, 0);
+            ctx.moveTo(0, -50); // Larger size for maximum visibility
+            ctx.lineTo(25, 0); // Front side
+            ctx.lineTo(25, 75); // Right side
+            ctx.lineTo(-25, 75); // Left side
+            ctx.lineTo(-25, 0); // Back side
             ctx.closePath();
             ctx.fillStyle = colors.boat;
             ctx.fill();
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 1;
             ctx.stroke();
-            
+
+            // Add 3D shading
+            ctx.beginPath();
+            ctx.moveTo(0, -50);
+            ctx.lineTo(25, 0);
+            ctx.lineTo(0, 25);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Shadow effect
+            ctx.fill();
+
             ctx.restore();
-            
+
             // Draw velocity vectors
             if (params.showVectors && !boat.stopped) {
                 drawVelocityVectors();
@@ -482,45 +491,44 @@
         // Draw velocity vectors
         function drawVelocityVectors() {
             const boatRadians = params.boatAngle * Math.PI / 180;
-            const scale = 10; // Scale for better visualization
-            
+            const scale = 20; // Increased scale for better visibility
+
             // Boat velocity relative to river (v_B→R)
             const boatVx = params.boatSpeed * Math.sin(boatRadians) * scale;
             const boatVy = -params.boatSpeed * Math.cos(boatRadians) * scale;
-            
+
             // River velocity relative to earth (v_R→E)
             const riverVx = params.riverSpeed * scale;
             const riverVy = 0;
-            
+
             // Resultant velocity (v_B→E)
             const resultantVx = boatVx + riverVx;
             const resultantVy = boatVy + riverVy;
-            
+
             // Draw boat velocity vector
-            drawArrow(boat.x, boat.y, boat.x + boatVx, boat.y + boatVy, colors.boatVector, "v_B→R");
-            
+            drawArrow(boat.x, boat.y, boat.x + boatVx, boat.y + boatVy, '#000000', "v_B→R"); // Black
+
             // Draw river velocity vector
-            drawArrow(boat.x, boat.y, boat.x + riverVx, boat.y + riverVy, colors.riverVector, "v_R→E");
-            
+            drawArrow(boat.x, boat.y, boat.x + riverVx, boat.y + riverVy, '#FFFF00', "v_R→E"); // Yellow
+
             // Draw resultant velocity vector if enabled
             if (params.showResultant) {
-                drawArrow(boat.x, boat.y, boat.x + resultantVx, boat.y + resultantVy, colors.resultantVector, "v_B→E");
+                drawArrow(boat.x, boat.y, boat.x + resultantVx, boat.y + resultantVy, '#9400D3', "v_B→E"); // Dark violet
             }
         }
-        
-        // Helper function to draw arrows with labels
+
         function drawArrow(fromX, fromY, toX, toY, color, label) {
-            const headSize = 10;
+            const headSize = 15; // Increased arrowhead size
             const angle = Math.atan2(toY - fromY, toX - fromX);
-            
+
             // Draw line
             ctx.beginPath();
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(toX, toY);
             ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4; // Increased line width
             ctx.stroke();
-            
+
             // Draw arrowhead
             ctx.beginPath();
             ctx.moveTo(toX, toY);
@@ -535,12 +543,12 @@
             ctx.closePath();
             ctx.fillStyle = color;
             ctx.fill();
-            
+
             // Draw label
             ctx.fillStyle = color;
-            ctx.font = '14px Arial';
+            ctx.font = '16px Arial'; // Slightly larger font
             ctx.textAlign = 'center';
-            ctx.fillText(label, (fromX + toX) / 2 + 15, (fromY + toY) / 2 + 15);
+            ctx.fillText(label, toX + 20, toY - 10); // Adjusted label position to avoid overlap
         }
         
         // Update boat position
