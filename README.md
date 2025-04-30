@@ -17,9 +17,9 @@ Access the visualizer online here:
   - Projectile Motion
   - Relative Motion
   - Rotational Motion
-  - Pendulum Motion
+  - Simple Pendulum Motion
   - Spring Motion
-  - Buoyancy Simulation
+  - Buoyancy Simulation 
 - **User Interactions**
   - Input sliders and fields for parameters like angle, velocity, mass, etc.
   - Start, Pause, Reset buttons
