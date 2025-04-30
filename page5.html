@@ -1,704 +1,824 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>River Crossing Simulator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background: #f5f5dc;
-        }
-        canvas {
-            display: block;
-        }
-        .info-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            max-width: 250px;
-            border: 3px solid #4682B4;
-        }
-        .info-panel h2 {
-            margin-top: 0;
-            color: #4169E1;
-            font-size: 20px;
-            text-align: center;
-        }
-        .info-panel p {
-            margin: 8px 0;
-            color: #333;
-            font-size: 14px;
-        }
-        .equation {
-            font-style: italic;
-            font-weight: bold;
-            color: #0277BD;
-        }
-        .controls-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            padding: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            border: 2px solid #4CAF50;
-            font-size: 14px;
-            color: #333;
-        }
-        .control-panel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            max-width: 300px;
-            border: 3px solid #FF9800;
-        }
-        .vector-display {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background-color: rgba(255, 240, 255, 0.8);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            max-width: 250px;
-            border: 3px solid #9C27B0;
-        }
-        button {
-            padding: 8px 16px;
-            margin: 5px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        input[type="range"] {
-            width: 100%;
-            margin: 10px 0;
-        }
-        input[type="number"] {
-            width: 60px;
-            padding: 5px;
-            margin-left: 5px;
-        }
-        .slider-container {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
-        .slider-container label {
-            flex: 1;
-            margin-right: 10px;
-        }
-        .vector-checkbox {
-            margin: 10px 0;
-        }
-        .status-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            padding: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #4CAF50;
-            display: none;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            border: 3px solid #4CAF50;
-        }
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        background: #f5f5dc;
+      }
+      canvas {
+        display: block;
+      }
+      .info-panel {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        max-width: 250px;
+        border: 3px solid #4682b4;
+      }
+      .info-panel h2 {
+        margin-top: 0;
+        color: #4169e1;
+        font-size: 20px;
+        text-align: center;
+      }
+      .info-panel p {
+        margin: 8px 0;
+        color: #333;
+        font-size: 14px;
+      }
+      .equation {
+        font-style: italic;
+        font-weight: bold;
+        color: #0277bd;
+      }
+      .controls-info {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        border: 2px solid #4caf50;
+        font-size: 14px;
+        color: #333;
+      }
+      .control-panel {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        max-width: 300px;
+        border: 3px solid #ff9800;
+      }
+      .vector-display {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background-color: rgba(255, 240, 255, 0.8);
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        max-width: 250px;
+        border: 3px solid #9c27b0;
+      }
+      button {
+        padding: 8px 16px;
+        margin: 5px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      input[type="range"] {
+        width: 100%;
+        margin: 10px 0;
+      }
+      input[type="number"] {
+        width: 60px;
+        padding: 5px;
+        margin-left: 5px;
+      }
+      .slider-container {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+      }
+      .slider-container label {
+        flex: 1;
+        margin-right: 10px;
+      }
+      .vector-checkbox {
+        margin: 10px 0;
+      }
+      .status-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #4caf50;
+        display: none;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        border: 3px solid #4caf50;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <canvas id="simulationCanvas"></canvas>
-    
+
     <div class="info-panel">
-        <h2>Relative Motion: River Crossing</h2>
-        <p><span class="equation">v̄<sub>B→E</sub> = v̄<sub>B→R</sub> + v̄<sub>R→E</sub></span></p>
-        <p>Boat velocity relative to Earth equals boat velocity relative to river plus river velocity relative to Earth.</p>
-        <div id="live-data">
-            <p>River Speed: <span id="riverSpeed">0</span> m/s</p>
-            <p>Boat Speed Relative to River: <span id="boatSpeed">0</span> m/s</p>
-            <p>Boat Angle: <span id="boatAngle">0</span>°</p>
-            <p>Resultant Speed: <span id="resultantSpeed">0</span> m/s</p>
-            <p>Resultant Direction: <span id="resultantDirection">0</span>°</p>
-            <p>Drift Distance: <span id="driftDistance">0</span> m</p>
-            <p>Crossing Time: <span id="crossingTime">0</span> s</p>
-        </div>
+      <h2>Relative Motion: River Crossing</h2>
+      <p>
+        <span class="equation"
+          >v̄<sub>B→E</sub> = v̄<sub>B→R</sub> + v̄<sub>R→E</sub></span
+        >
+      </p>
+      <p>
+        Boat velocity relative to Earth equals boat velocity relative to river
+        plus river velocity relative to Earth.
+      </p>
+      <div id="live-data">
+        <p>River Speed: <span id="riverSpeed">0</span> m/s</p>
+        <p>Boat Speed Relative to River: <span id="boatSpeed">0</span> m/s</p>
+        <p>Boat Angle: <span id="boatAngle">0</span>°</p>
+        <p>Resultant Speed: <span id="resultantSpeed">0</span> m/s</p>
+        <p>Resultant Direction: <span id="resultantDirection">0</span>°</p>
+        <p>Drift Distance: <span id="driftDistance">0</span> m</p>
+        <p>Crossing Time: <span id="crossingTime">0</span> s</p>
+      </div>
     </div>
-    
+
     <div class="control-panel">
-        <div class="slider-container">
-            <label>River Speed (m/s):</label>
-            <input type="range" id="riverSpeedSlider" min="0" max="10" step="0.1" value="3">
-            <input type="number" id="riverSpeedInput" min="0" max="10" step="0.1" value="3">
-        </div>
-        
-        <div class="slider-container">
-            <label>Boat Speed (m/s):</label>
-            <input type="range" id="boatSpeedSlider" min="0" max="10" step="0.1" value="4">
-            <input type="number" id="boatSpeedInput" min="0" max="10" step="0.1" value="4">
-        </div>
-        
-        <div class="slider-container">
-            <label>Aim Direction (°):</label>
-            <input type="range" id="boatAngleSlider" min="-90" max="90" step="1" value="0">
-            <input type="number" id="boatAngleInput" min="-90" max="90" step="1" value="0">
-        </div>
-        
-        <div class="vector-checkbox">
-            <input type="checkbox" id="showVectors" checked>
-            <label for="showVectors">Show Velocity Vectors</label>
-        </div>
-        
-        <div class="buttons">
-            <button id="startBtn">Start</button>
-            <button id="pauseBtn">Pause</button>
-            <button id="resetBtn">Reset</button>
-        </div>
+      <div class="slider-container">
+        <label>River Speed (m/s):</label>
+        <input
+          type="range"
+          id="riverSpeedSlider"
+          min="0"
+          max="10"
+          step="0.1"
+          value="3"
+        />
+        <input
+          type="number"
+          id="riverSpeedInput"
+          min="0"
+          max="10"
+          step="0.1"
+          value="3"
+        />
+      </div>
+
+      <div class="slider-container">
+        <label>Boat Speed (m/s):</label>
+        <input
+          type="range"
+          id="boatSpeedSlider"
+          min="0"
+          max="10"
+          step="0.1"
+          value="4"
+        />
+        <input
+          type="number"
+          id="boatSpeedInput"
+          min="0"
+          max="10"
+          step="0.1"
+          value="4"
+        />
+      </div>
+
+      <div class="slider-container">
+        <label>Aim Direction (°):</label>
+        <input
+          type="range"
+          id="boatAngleSlider"
+          min="-90"
+          max="90"
+          step="1"
+          value="0"
+        />
+        <input
+          type="number"
+          id="boatAngleInput"
+          min="-90"
+          max="90"
+          step="1"
+          value="0"
+        />
+      </div>
+
+      <div class="vector-checkbox">
+        <input type="checkbox" id="showVectors" checked />
+        <label for="showVectors">Show Velocity Vectors</label>
+      </div>
+
+      <div class="buttons">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+      </div>
     </div>
-    
+
     <div class="vector-display">
-        <input type="checkbox" id="showResultant" checked>
-        <label for="showResultant">Show Resultant Velocity</label>
-        <p id="resultantVector">v<sub>B→E</sub> = 5 m/s @ 36.87° E of N</p>
+      <input type="checkbox" id="showResultant" checked />
+      <label for="showResultant">Show Resultant Velocity</label>
+      <p id="resultantVector">v<sub>B→E</sub> = 5 m/s @ 36.87° E of N</p>
     </div>
-    
+
     <div class="controls-info">
-        Experiment with different river speeds, boat speeds, and aim directions to see how they affect the path.
+      Experiment with different river speeds, boat speeds, and aim directions to
+      see how they affect the path.
     </div>
-    
+
     <div id="statusMessage" class="status-message">
-        Successfully crossed the river!
+      Successfully crossed the river!
     </div>
-    
+
     <script>
-        // Canvas setup
-        const canvas = document.getElementById('simulationCanvas');
-        const ctx = canvas.getContext('2d');
-        const statusMessage = document.getElementById('statusMessage');
-        
-        // Set canvas size
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+      // Canvas setup
+      const canvas = document.getElementById("simulationCanvas");
+      const ctx = canvas.getContext("2d");
+      const statusMessage = document.getElementById("statusMessage");
+
+      // Set canvas size
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+
+      // Simulation parameters
+      const params = {
+        riverSpeed: 3, // m/s
+        boatSpeed: 4, // m/s
+        boatAngle: 0, // degrees (0 = North, -90 = West, 90 = East)
+        showVectors: true,
+        showResultant: true,
+        paused: true,
+        riverWidth: 300, // pixels
+        pixelsPerMeter: 20, // scale factor
+        timeScale: 0.5, // simulation speed
+      };
+
+      // River boundaries
+      let riverTop, riverBottom;
+
+      // Boat state
+      let boat = {
+        x: 0,
+        y: 0,
+        path: [],
+        startTime: 0,
+        crossingTime: 0,
+        hasCrossed: false,
+        driftDistance: 0,
+        stopped: false,
+      };
+
+      // Colors
+      const colors = {
+        river: "#4169E1",
+        riverFlow: "#87CEFA",
+        boat: "#FF5722",
+        boatVector: "#FF9800",
+        riverVector: "#4169E1",
+        resultantVector: "#9C27B0",
+        ground: "#8BC34A",
+        path: "#FF5722",
+      };
+
+      // Calculate river boundaries
+      function calculateRiverBoundaries() {
+        riverTop = canvas.height / 2 - params.riverWidth / 2;
+        riverBottom = canvas.height / 2 + params.riverWidth / 2;
+      }
+
+      // Initialize simulation
+      function init() {
+        calculateRiverBoundaries();
+
+        // Position boat at the bottom edge of the river
+        boat.x = canvas.width / 2;
+        boat.y = riverBottom;
+        boat.path = [{ x: boat.x, y: boat.y }];
+        boat.startTime = 0;
+        boat.crossingTime = 0;
+        boat.hasCrossed = false;
+        boat.driftDistance = 0;
+        boat.stopped = false;
+
+        // Hide status message
+        statusMessage.style.display = "none";
+
+        // Set initial values for inputs
+        document.getElementById("riverSpeedSlider").value = params.riverSpeed;
+        document.getElementById("riverSpeedInput").value = params.riverSpeed;
+        document.getElementById("boatSpeedSlider").value = params.boatSpeed;
+        document.getElementById("boatSpeedInput").value = params.boatSpeed;
+        document.getElementById("boatAngleSlider").value = params.boatAngle;
+        document.getElementById("boatAngleInput").value = params.boatAngle;
+        document.getElementById("showVectors").checked = params.showVectors;
+        document.getElementById("showResultant").checked = params.showResultant;
+
+        updateInfoPanel();
+      }
+
+      // Update HTML display elements
+      function updateInfoPanel() {
+        // Calculate resultant velocity components
+        const boatRadians = (params.boatAngle * Math.PI) / 180;
+        const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
+        const vy = -params.boatSpeed * Math.cos(boatRadians); // negative because canvas y is down
+
+        const resultantSpeed = Math.sqrt(vx * vx + vy * vy);
+        let resultantAngle = (Math.atan2(vx, -vy) * 180) / Math.PI; // convert to degrees
+
+        // Format as East of North
+        let formattedAngle;
+        if (resultantAngle >= 0) {
+          formattedAngle = resultantAngle.toFixed(2) + "° E of N";
+        } else {
+          formattedAngle = Math.abs(resultantAngle).toFixed(2) + "° W of N";
         }
-        
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        // Simulation parameters
-        const params = {
-            riverSpeed: 3, // m/s
-            boatSpeed: 4,  // m/s
-            boatAngle: 0,  // degrees (0 = North, -90 = West, 90 = East)
-            showVectors: true,
-            showResultant: true,
-            paused: true,
-            riverWidth: 300, // pixels
-            pixelsPerMeter: 20, // scale factor
-            timeScale: 0.5,  // simulation speed
-        };
-        
-        // River boundaries
-        let riverTop, riverBottom;
-        
-        // Boat state
-        let boat = {
-            x: 0,
-            y: 0,
-            path: [],
-            startTime: 0,
-            crossingTime: 0,
-            hasCrossed: false,
-            driftDistance: 0,
-            stopped: false
-        };
-        
-        // Colors
-        const colors = {
-            river: '#4169E1',
-            riverFlow: '#87CEFA',
-            boat: '#FF5722',
-            boatVector: '#FF9800',
-            riverVector: '#4169E1',
-            resultantVector: '#9C27B0',
-            ground: '#8BC34A',
-            path: '#FF5722'
-        };
-        
-        // Calculate river boundaries
-        function calculateRiverBoundaries() {
-            riverTop = canvas.height / 2 - params.riverWidth / 2;
-            riverBottom = canvas.height / 2 + params.riverWidth / 2;
+
+        // Update the displayed values
+        document.getElementById("riverSpeed").textContent =
+          params.riverSpeed.toFixed(1);
+        document.getElementById("boatSpeed").textContent =
+          params.boatSpeed.toFixed(1);
+        document.getElementById("boatAngle").textContent =
+          params.boatAngle.toFixed(0);
+        document.getElementById("resultantSpeed").textContent =
+          resultantSpeed.toFixed(2);
+        document.getElementById("resultantDirection").textContent =
+          formattedAngle;
+        document.getElementById("driftDistance").textContent =
+          boat.driftDistance.toFixed(1);
+
+        // Update crossing time if available
+        if (boat.hasCrossed) {
+          document.getElementById("crossingTime").textContent = (
+            boat.crossingTime / 1000
+          ).toFixed(1);
+        } else {
+          document.getElementById("crossingTime").textContent = "0.0";
         }
-        
-        // Initialize simulation
-        function init() {
-            calculateRiverBoundaries();
-            
-            // Position boat at the bottom edge of the river
-            boat.x = canvas.width / 2;
-            boat.y = riverBottom;
-            boat.path = [{x: boat.x, y: boat.y}];
-            boat.startTime = 0;
-            boat.crossingTime = 0;
-            boat.hasCrossed = false;
-            boat.driftDistance = 0;
-            boat.stopped = false;
-            
-            // Hide status message
-            statusMessage.style.display = 'none';
-            
-            // Set initial values for inputs
-            document.getElementById('riverSpeedSlider').value = params.riverSpeed;
-            document.getElementById('riverSpeedInput').value = params.riverSpeed;
-            document.getElementById('boatSpeedSlider').value = params.boatSpeed;
-            document.getElementById('boatSpeedInput').value = params.boatSpeed;
-            document.getElementById('boatAngleSlider').value = params.boatAngle;
-            document.getElementById('boatAngleInput').value = params.boatAngle;
-            document.getElementById('showVectors').checked = params.showVectors;
-            document.getElementById('showResultant').checked = params.showResultant;
-            
-            updateInfoPanel();
-        }
-        
-        // Update HTML display elements
-        function updateInfoPanel() {
-            // Calculate resultant velocity components
-            const boatRadians = params.boatAngle * Math.PI / 180;
-            const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
-            const vy = -params.boatSpeed * Math.cos(boatRadians); // negative because canvas y is down
-            
-            const resultantSpeed = Math.sqrt(vx * vx + vy * vy);
-            let resultantAngle = Math.atan2(vx, -vy) * 180 / Math.PI; // convert to degrees
-            
-            // Format as East of North
-            let formattedAngle;
-            if (resultantAngle >= 0) {
-                formattedAngle = resultantAngle.toFixed(2) + "° E of N";
-            } else {
-                formattedAngle = Math.abs(resultantAngle).toFixed(2) + "° W of N";
-            }
-            
-            // Update the displayed values
-            document.getElementById('riverSpeed').textContent = params.riverSpeed.toFixed(1);
-            document.getElementById('boatSpeed').textContent = params.boatSpeed.toFixed(1);
-            document.getElementById('boatAngle').textContent = params.boatAngle.toFixed(0);
-            document.getElementById('resultantSpeed').textContent = resultantSpeed.toFixed(2);
-            document.getElementById('resultantDirection').textContent = formattedAngle;
-            document.getElementById('driftDistance').textContent = boat.driftDistance.toFixed(1);
-            
-            // Update crossing time if available
-            if (boat.hasCrossed) {
-                document.getElementById('crossingTime').textContent = (boat.crossingTime / 1000).toFixed(1);
-            } else {
-                document.getElementById('crossingTime').textContent = "0.0";
-            }
-            
-            // Update the resultant vector display
-            document.getElementById('resultantVector').innerHTML = 
-                "v<sub>B→E</sub> = " + resultantSpeed.toFixed(2) + " m/s @ " + formattedAngle;
-        }
-        
-        // Draw river and shores
-        function drawEnvironment() {
-            // Draw sky
-            ctx.fillStyle = '#87CEEB';
-            ctx.fillRect(0, 0, canvas.width, riverTop);
-            
-            // Draw river
-            ctx.fillStyle = colors.river;
-            ctx.fillRect(0, riverTop, canvas.width, params.riverWidth);
-            
-            // Draw river flow indicators
-            drawRiverFlowIndicators(riverTop, riverBottom);
-            
-            // Draw south shore (bottom)
-            ctx.fillStyle = colors.ground;
-            ctx.fillRect(0, riverBottom, canvas.width, canvas.height - riverBottom);
-            
-            // Draw north shore (top)
-            ctx.fillStyle = colors.ground;
-            ctx.fillRect(0, 0, canvas.width, riverTop);
-            
-            // Draw compass
-            drawCompass();
-            
-            // Draw reference point for crossing (starting x position)
-            ctx.beginPath();
-            ctx.moveTo(boat.path[0].x, riverTop);
-            ctx.lineTo(boat.path[0].x, riverBottom);
-            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-            ctx.setLineDash([5, 5]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-        
+
+        // Update the resultant vector display
+        document.getElementById("resultantVector").innerHTML =
+          "v<sub>B→E</sub> = " +
+          resultantSpeed.toFixed(2) +
+          " m/s @ " +
+          formattedAngle;
+      }
+
+      // Draw river and shores
+      function drawEnvironment() {
+        // Draw sky
+        ctx.fillStyle = "#87CEEB";
+        ctx.fillRect(0, 0, canvas.width, riverTop);
+
+        // Draw river
+        ctx.fillStyle = colors.river;
+        ctx.fillRect(0, riverTop, canvas.width, params.riverWidth);
+
         // Draw river flow indicators
-        function drawRiverFlowIndicators(riverTop, riverBottom) {
-            const riverHeight = riverBottom - riverTop;
-            const waveSpacing = 50;
-            const waveHeight = 5;
-            const numWaves = Math.floor(canvas.width / waveSpacing) + 2;
-            const time = Date.now() / 1000;
-            
-            ctx.strokeStyle = colors.riverFlow;
-            ctx.lineWidth = 2;
-            
-            // Draw multiple rows of waves
-            for (let row = 1; row < 5; row++) {
-                const y = riverTop + (riverHeight * row / 5);
-                
-                ctx.beginPath();
-                for (let i = -1; i < numWaves; i++) {
-                    // Animate waves moving to the right based on river speed
-                    const offset = (time * params.riverSpeed * 10) % waveSpacing;
-                    const x = i * waveSpacing - offset;
-                    
-                    // Simple wave pattern
-                    for (let j = 0; j < waveSpacing; j += 10) {
-                        const waveX = x + j;
-                        const waveY = y + Math.sin(j / 5) * waveHeight / 2;
-                        
-                        if (j === 0) {
-                            ctx.moveTo(waveX, waveY);
-                        } else {
-                            ctx.lineTo(waveX, waveY);
-                        }
-                    }
-                }
-                ctx.stroke();
-            }
-        }
-        
+        drawRiverFlowIndicators(riverTop, riverBottom);
+
+        // Draw south shore (bottom)
+        ctx.fillStyle = colors.ground;
+        ctx.fillRect(0, riverBottom, canvas.width, canvas.height - riverBottom);
+
+        // Draw north shore (top)
+        ctx.fillStyle = colors.ground;
+        ctx.fillRect(0, 0, canvas.width, riverTop);
+
         // Draw compass
-        function drawCompass() {
-            const compassRadius = 40;
-            const compassX = 80;
-            const compassY = 80;
-            
-            // Draw compass circle
-            ctx.beginPath();
-            ctx.arc(compassX, compassY, compassRadius, 0, 2 * Math.PI);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.fill();
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Draw compass directions
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#333';
-            ctx.font = '16px Arial';
-            
-            ctx.fillText('N', compassX, compassY - compassRadius + 15);
-            ctx.fillText('S', compassX, compassY + compassRadius - 15);
-            ctx.fillText('E', compassX + compassRadius - 15, compassY);
-            ctx.fillText('W', compassX - compassRadius + 15, compassY);
-            
-            // Draw compass needle
-            ctx.beginPath();
-            ctx.moveTo(compassX, compassY);
-            ctx.lineTo(compassX, compassY - compassRadius + 10);
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(compassX, compassY);
-            ctx.lineTo(compassX, compassY + compassRadius - 10);
-            ctx.strokeStyle = '#333';
-            ctx.stroke();
+        drawCompass();
+
+        // Draw reference point for crossing (starting x position)
+        ctx.beginPath();
+        ctx.moveTo(boat.path[0].x, riverTop);
+        ctx.lineTo(boat.path[0].x, riverBottom);
+        ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Draw river flow indicators
+      function drawRiverFlowIndicators(riverTop, riverBottom) {
+        const riverHeight = riverBottom - riverTop;
+        const waveSpacing = 50;
+        const waveHeight = 5;
+        const numWaves = Math.floor(canvas.width / waveSpacing) + 2;
+        const time = Date.now() / 1000;
+
+        ctx.strokeStyle = colors.riverFlow;
+        ctx.lineWidth = 2;
+
+        // Draw multiple rows of waves
+        for (let row = 1; row < 5; row++) {
+          const y = riverTop + (riverHeight * row) / 5;
+
+          ctx.beginPath();
+          for (let i = -1; i < numWaves; i++) {
+            // Animate waves moving to the right based on river speed
+            const offset = (time * params.riverSpeed * 10) % waveSpacing;
+            const x = i * waveSpacing - offset;
+
+            // Simple wave pattern
+            for (let j = 0; j < waveSpacing; j += 10) {
+              const waveX = x + j;
+              const waveY = y + (Math.sin(j / 5) * waveHeight) / 2;
+
+              if (j === 0) {
+                ctx.moveTo(waveX, waveY);
+              } else {
+                ctx.lineTo(waveX, waveY);
+              }
+            }
+          }
+          ctx.stroke();
         }
-        
+      }
+
+      // Draw compass
+      function drawCompass() {
+        const compassRadius = 40;
+        const compassX = 80;
+        const compassY = 80;
+
+        // Draw compass circle
+        ctx.beginPath();
+        ctx.arc(compassX, compassY, compassRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.fill();
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw compass directions
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#333";
+        ctx.font = "16px Arial";
+
+        ctx.fillText("N", compassX, compassY - compassRadius + 15);
+        ctx.fillText("S", compassX, compassY + compassRadius - 15);
+        ctx.fillText("E", compassX + compassRadius - 15, compassY);
+        ctx.fillText("W", compassX - compassRadius + 15, compassY);
+
+        // Draw compass needle
+        ctx.beginPath();
+        ctx.moveTo(compassX, compassY);
+        ctx.lineTo(compassX, compassY - compassRadius + 10);
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(compassX, compassY);
+        ctx.lineTo(compassX, compassY + compassRadius - 10);
+        ctx.strokeStyle = "#333";
+        ctx.stroke();
+      }
+
+      // Draw boat
+      function drawBoat() {
+        // Draw path
+        if (boat.path.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(boat.path[0].x, boat.path[0].y);
+          for (let i = 1; i < boat.path.length; i++) {
+            ctx.lineTo(boat.path[i].x, boat.path[i].y);
+          }
+          ctx.strokeStyle = colors.path;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        // Calculate boat angle based on resultant velocity
+        const boatRadians = (params.boatAngle * Math.PI) / 180;
+        const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
+        const vy = -params.boatSpeed * Math.cos(boatRadians);
+        const resultantAngle = Math.atan2(vy, vx);
+
         // Draw boat
-        function drawBoat() {
-            // Draw path
-            if (boat.path.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(boat.path[0].x, boat.path[0].y);
-                for (let i = 1; i < boat.path.length; i++) {
-                    ctx.lineTo(boat.path[i].x, boat.path[i].y);
-                }
-                ctx.strokeStyle = colors.path;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-            
-            // Calculate boat angle based on resultant velocity
-            const boatRadians = params.boatAngle * Math.PI / 180;
-            const vx = params.riverSpeed + params.boatSpeed * Math.sin(boatRadians);
-            const vy = -params.boatSpeed * Math.cos(boatRadians);
-            const resultantAngle = Math.atan2(vy, vx);
-            
-            // Draw boat
-            ctx.save();
-            ctx.translate(boat.x, boat.y);
-            ctx.rotate(-resultantAngle - Math.PI / 2); // Rotate to face direction of motion
-            
-            // Boat shape
-            ctx.beginPath();
-            ctx.moveTo(0, -10);
-            ctx.lineTo(5, 0);
-            ctx.lineTo(5, 15);
-            ctx.lineTo(-5, 15);
-            ctx.lineTo(-5, 0);
-            ctx.closePath();
-            ctx.fillStyle = colors.boat;
-            ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            
-            ctx.restore();
-            
-            // Draw velocity vectors
-            if (params.showVectors && !boat.stopped) {
-                drawVelocityVectors();
-            }
-        }
-        
+        ctx.save();
+        ctx.translate(boat.x, boat.y);
+        ctx.rotate(-resultantAngle - Math.PI / 2); // Rotate to face direction of motion
+
+        // Boat shape (3D effect with even larger size)
+        ctx.beginPath();
+        ctx.moveTo(0, -50); // Larger size for maximum visibility
+        ctx.lineTo(25, 0); // Front side
+        ctx.lineTo(25, 75); // Right side
+        ctx.lineTo(-25, 75); // Left side
+        ctx.lineTo(-25, 0); // Back side
+        ctx.closePath();
+        ctx.fillStyle = colors.boat;
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Add 3D shading
+        ctx.beginPath();
+        ctx.moveTo(0, -50);
+        ctx.lineTo(25, 0);
+        ctx.lineTo(0, 25);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; // Shadow effect
+        ctx.fill();
+
+        ctx.restore();
+
         // Draw velocity vectors
-        function drawVelocityVectors() {
-            const boatRadians = params.boatAngle * Math.PI / 180;
-            const scale = 10; // Scale for better visualization
-            
-            // Boat velocity relative to river (v_B→R)
-            const boatVx = params.boatSpeed * Math.sin(boatRadians) * scale;
-            const boatVy = -params.boatSpeed * Math.cos(boatRadians) * scale;
-            
-            // River velocity relative to earth (v_R→E)
-            const riverVx = params.riverSpeed * scale;
-            const riverVy = 0;
-            
-            // Resultant velocity (v_B→E)
-            const resultantVx = boatVx + riverVx;
-            const resultantVy = boatVy + riverVy;
-            
-            // Draw boat velocity vector
-            drawArrow(boat.x, boat.y, boat.x + boatVx, boat.y + boatVy, colors.boatVector, "v_B→R");
-            
-            // Draw river velocity vector
-            drawArrow(boat.x, boat.y, boat.x + riverVx, boat.y + riverVy, colors.riverVector, "v_R→E");
-            
-            // Draw resultant velocity vector if enabled
-            if (params.showResultant) {
-                drawArrow(boat.x, boat.y, boat.x + resultantVx, boat.y + resultantVy, colors.resultantVector, "v_B→E");
-            }
+        if (params.showVectors && !boat.stopped) {
+          drawVelocityVectors();
         }
-        
-        // Helper function to draw arrows with labels
-        function drawArrow(fromX, fromY, toX, toY, color, label) {
-            const headSize = 10;
-            const angle = Math.atan2(toY - fromY, toX - fromX);
-            
-            // Draw line
-            ctx.beginPath();
-            ctx.moveTo(fromX, fromY);
-            ctx.lineTo(toX, toY);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Draw arrowhead
-            ctx.beginPath();
-            ctx.moveTo(toX, toY);
-            ctx.lineTo(
-                toX - headSize * Math.cos(angle - Math.PI / 6),
-                toY - headSize * Math.sin(angle - Math.PI / 6)
-            );
-            ctx.lineTo(
-                toX - headSize * Math.cos(angle + Math.PI / 6),
-                toY - headSize * Math.sin(angle + Math.PI / 6)
-            );
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.fill();
-            
-            // Draw label
-            ctx.fillStyle = color;
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(label, (fromX + toX) / 2 + 15, (fromY + toY) / 2 + 15);
+      }
+
+      // Draw velocity vectors
+      function drawVelocityVectors() {
+        const boatRadians = (params.boatAngle * Math.PI) / 180;
+        const scale = 10; // Scale for better visualization
+
+        // Boat velocity relative to river (v_B→R)
+        const boatVx = params.boatSpeed * Math.sin(boatRadians) * scale;
+        const boatVy = -params.boatSpeed * Math.cos(boatRadians) * scale;
+
+        // River velocity relative to earth (v_R→E)
+        const riverVx = params.riverSpeed * scale;
+        const riverVy = 0;
+
+        // Resultant velocity (v_B→E)
+        const resultantVx = boatVx + riverVx;
+        const resultantVy = boatVy + riverVy;
+
+        // Draw boat velocity vector
+        drawArrow(
+          boat.x,
+          boat.y,
+          boat.x + boatVx,
+          boat.y + boatVy,
+          colors.boatVector,
+          "v_B→R"
+        );
+
+        // Draw river velocity vector
+        drawArrow(
+          boat.x,
+          boat.y,
+          boat.x + riverVx,
+          boat.y + riverVy,
+          colors.riverVector,
+          "v_R→E"
+        );
+
+        // Draw resultant velocity vector if enabled
+        if (params.showResultant) {
+          drawArrow(
+            boat.x,
+            boat.y,
+            boat.x + resultantVx,
+            boat.y + resultantVy,
+            colors.resultantVector,
+            "v_B→E"
+          );
         }
-        
+      }
+
+      // Helper function to draw arrows with labels
+      function drawArrow(fromX, fromY, toX, toY, color, label) {
+        const headSize = 10;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+
+        // Draw line
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Draw arrowhead
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(
+          toX - headSize * Math.cos(angle - Math.PI / 6),
+          toY - headSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          toX - headSize * Math.cos(angle + Math.PI / 6),
+          toY - headSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // Draw label
+        ctx.fillStyle = color;
+        ctx.font = "14px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(label, (fromX + toX) / 2 + 15, (fromY + toY) / 2 + 15);
+      }
+
+      // Update boat position
+      function updateBoat(deltaTime) {
+        if (params.paused || boat.stopped) return;
+
+        // Convert boat angle to radians
+        const boatRadians = (params.boatAngle * Math.PI) / 180;
+
+        // Calculate velocity components
+        // Note: Canvas y-axis is inverted (down is positive)
+        const vx =
+          (params.riverSpeed + params.boatSpeed * Math.sin(boatRadians)) *
+          params.timeScale;
+        const vy = -params.boatSpeed * Math.cos(boatRadians) * params.timeScale;
+
         // Update boat position
-        function updateBoat(deltaTime) {
-            if (params.paused || boat.stopped) return;
-            
-            // Convert boat angle to radians
-            const boatRadians = params.boatAngle * Math.PI / 180;
-            
-            // Calculate velocity components
-            // Note: Canvas y-axis is inverted (down is positive)
-            const vx = (params.riverSpeed + params.boatSpeed * Math.sin(boatRadians)) * params.timeScale;
-            const vy = (-params.boatSpeed * Math.cos(boatRadians)) * params.timeScale;
-            
-            // Update boat position
-            boat.x += vx * deltaTime * params.pixelsPerMeter;
-            boat.y += vy * deltaTime * params.pixelsPerMeter;
-            
-            // Add point to path (not every frame, to avoid too many points)
-            if (Date.now() % 100 < 20) {
-                boat.path.push({x: boat.x, y: boat.y});
-            }
-            
-            // Check if boat crossed the river
-            if (!boat.hasCrossed && boat.y <= riverTop) {
-                boat.hasCrossed = true;
-                boat.crossingTime = Date.now() - startTime;
-                boat.stopped = true;
-                
-                // Calculate drift distance in meters
-                boat.driftDistance = Math.abs(boat.x - boat.path[0].x) / params.pixelsPerMeter;
-                updateInfoPanel();
-                
-                // Show success message
-                statusMessage.textContent = "Successfully crossed the river!";
-                statusMessage.style.display = 'block';
-                
-                // Pause the simulation
-                params.paused = true;
-            }
-            
-            // Reset if boat goes off screen
-            if (boat.x < -50 || boat.x > canvas.width + 50 || boat.y > canvas.height + 50) {
-                resetSimulation();
-            }
+        boat.x += vx * deltaTime * params.pixelsPerMeter;
+        boat.y += vy * deltaTime * params.pixelsPerMeter;
+
+        // Add point to path (not every frame, to avoid too many points)
+        if (Date.now() % 100 < 20) {
+          boat.path.push({ x: boat.x, y: boat.y });
         }
-        
-        // Animation loop
-        let lastTime = 0;
-        let startTime = 0;
-        
-        function animate(timestamp) {
-            // Calculate delta time in seconds
-            const deltaTime = (timestamp - lastTime) / 1000;
-            lastTime = timestamp;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw environment
-            drawEnvironment();
-            
-            // Update and draw boat
-            updateBoat(deltaTime);
-            drawBoat();
-            
-            // Request next frame
-            requestAnimationFrame(animate);
+
+        // Check if boat crossed the river
+        if (!boat.hasCrossed && boat.y <= riverTop) {
+          boat.hasCrossed = true;
+          boat.crossingTime = Date.now() - startTime;
+          boat.stopped = true;
+
+          // Calculate drift distance in meters
+          boat.driftDistance =
+            Math.abs(boat.x - boat.path[0].x) / params.pixelsPerMeter;
+          updateInfoPanel();
+
+          // Show success message
+          statusMessage.textContent = "Successfully crossed the river!";
+          statusMessage.style.display = "block";
+
+          // Pause the simulation
+          params.paused = true;
         }
-        
-        // Start the simulation
-        function startSimulation() {
-            if (params.paused) {
-                params.paused = false;
-                startTime = Date.now();
-                document.getElementById('startBtn').textContent = "Restart";
-                
-                // Hide status message
-                statusMessage.style.display = 'none';
-            } else {
-                resetSimulation();
-                params.paused = false;
-                startTime = Date.now();
-            }
+
+        // Reset if boat goes off screen
+        if (
+          boat.x < -50 ||
+          boat.x > canvas.width + 50 ||
+          boat.y > canvas.height + 50
+        ) {
+          resetSimulation();
         }
-        
-        // Pause the simulation
-        function pauseSimulation() {
-            params.paused = true;
-        }
-        
-        // Reset the simulation
-        function resetSimulation() {
-            init();
-            params.paused = true;
-            document.getElementById('startBtn').textContent = "Start";
-        }
-        
-        // Event listeners for controls
-        document.getElementById('startBtn').addEventListener('click', startSimulation);
-        document.getElementById('pauseBtn').addEventListener('click', pauseSimulation);
-        document.getElementById('resetBtn').addEventListener('click', resetSimulation);
-        
-        document.getElementById('riverSpeedSlider').addEventListener('input', function(e) {
-            params.riverSpeed = parseFloat(e.target.value);
-            document.getElementById('riverSpeedInput').value = params.riverSpeed;
-            updateInfoPanel();
-        });
-        
-        document.getElementById('riverSpeedInput').addEventListener('change', function(e) {
-            params.riverSpeed = parseFloat(e.target.value);
-            document.getElementById('riverSpeedSlider').value = params.riverSpeed;
-            updateInfoPanel();
-        });
-        
-        document.getElementById('boatSpeedSlider').addEventListener('input', function(e) {
-            params.boatSpeed = parseFloat(e.target.value);
-            document.getElementById('boatSpeedInput').value = params.boatSpeed;
-            updateInfoPanel();
-        });
-        
-        document.getElementById('boatSpeedInput').addEventListener('change', function(e) {
-            params.boatSpeed = parseFloat(e.target.value);
-            document.getElementById('boatSpeedSlider').value = params.boatSpeed;
-            updateInfoPanel();
-        });
-        
-        document.getElementById('boatAngleSlider').addEventListener('input', function(e) {
-            params.boatAngle = parseFloat(e.target.value);
-            document.getElementById('boatAngleInput').value = params.boatAngle;
-            updateInfoPanel();
-        });
-        
-        document.getElementById('boatAngleInput').addEventListener('change', function(e) {
-            params.boatAngle = parseFloat(e.target.value);
-            document.getElementById('boatAngleSlider').value = params.boatAngle;
-            updateInfoPanel();
-        });
-        
-        document.getElementById('showVectors').addEventListener('change', function(e) {
-            params.showVectors = e.target.checked;
-        });
-        
-        document.getElementById('showResultant').addEventListener('change', function(e) {
-            params.showResultant = e.target.checked;
-        });
-        
-        // Initialize and start animation
-        init();
-        lastTime = performance.now();
+      }
+
+      // Animation loop
+      let lastTime = 0;
+      let startTime = 0;
+
+      function animate(timestamp) {
+        // Calculate delta time in seconds
+        const deltaTime = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw environment
+        drawEnvironment();
+
+        // Update and draw boat
+        updateBoat(deltaTime);
+        drawBoat();
+
+        // Request next frame
         requestAnimationFrame(animate);
-        
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            resizeCanvas();
-            calculateRiverBoundaries();
-            resetSimulation();
+      }
+
+      // Start the simulation
+      function startSimulation() {
+        if (params.paused) {
+          params.paused = false;
+          startTime = Date.now();
+          document.getElementById("startBtn").textContent = "Restart";
+
+          // Hide status message
+          statusMessage.style.display = "none";
+        } else {
+          resetSimulation();
+          params.paused = false;
+          startTime = Date.now();
+        }
+      }
+
+      // Pause the simulation
+      function pauseSimulation() {
+        params.paused = true;
+      }
+
+      // Reset the simulation
+      function resetSimulation() {
+        init();
+        params.paused = true;
+        document.getElementById("startBtn").textContent = "Start";
+      }
+
+      // Event listeners for controls
+      document
+        .getElementById("startBtn")
+        .addEventListener("click", startSimulation);
+      document
+        .getElementById("pauseBtn")
+        .addEventListener("click", pauseSimulation);
+      document
+        .getElementById("resetBtn")
+        .addEventListener("click", resetSimulation);
+
+      document
+        .getElementById("riverSpeedSlider")
+        .addEventListener("input", function (e) {
+          params.riverSpeed = parseFloat(e.target.value);
+          document.getElementById("riverSpeedInput").value = params.riverSpeed;
+          updateInfoPanel();
         });
+
+      document
+        .getElementById("riverSpeedInput")
+        .addEventListener("change", function (e) {
+          params.riverSpeed = parseFloat(e.target.value);
+          document.getElementById("riverSpeedSlider").value = params.riverSpeed;
+          updateInfoPanel();
+        });
+
+      document
+        .getElementById("boatSpeedSlider")
+        .addEventListener("input", function (e) {
+          params.boatSpeed = parseFloat(e.target.value);
+          document.getElementById("boatSpeedInput").value = params.boatSpeed;
+          updateInfoPanel();
+        });
+
+      document
+        .getElementById("boatSpeedInput")
+        .addEventListener("change", function (e) {
+          params.boatSpeed = parseFloat(e.target.value);
+          document.getElementById("boatSpeedSlider").value = params.boatSpeed;
+          updateInfoPanel();
+        });
+
+      document
+        .getElementById("boatAngleSlider")
+        .addEventListener("input", function (e) {
+          params.boatAngle = parseFloat(e.target.value);
+          document.getElementById("boatAngleInput").value = params.boatAngle;
+          updateInfoPanel();
+        });
+
+      document
+        .getElementById("boatAngleInput")
+        .addEventListener("change", function (e) {
+          params.boatAngle = parseFloat(e.target.value);
+          document.getElementById("boatAngleSlider").value = params.boatAngle;
+          updateInfoPanel();
+        });
+
+      document
+        .getElementById("showVectors")
+        .addEventListener("change", function (e) {
+          params.showVectors = e.target.checked;
+        });
+
+      document
+        .getElementById("showResultant")
+        .addEventListener("change", function (e) {
+          params.showResultant = e.target.checked;
+        });
+
+      // Initialize and start animation
+      init();
+      lastTime = performance.now();
+      requestAnimationFrame(animate);
+
+      // Handle window resize
+      window.addEventListener("resize", function () {
+        resizeCanvas();
+        calculateRiverBoundaries();
+        resetSimulation();
+      });
     </script>
-</body>
+  </body>
 </html>
