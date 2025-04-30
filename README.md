@@ -1,10 +1,10 @@
-# Naam Nai Pata: Physics Concept Visualizer
+# Phyzzle: Physics Concept Visualizer
 
 An interactive browser-based simulation tool for learning classical physics using 3D animations. Built using Three.js and WebGL.
 
 ## 📌 Overview
 
-**Naam Nai Pata** helps students and educators explore core physics concepts through real-time, interactive 3D simulations such as projectile motion, pendulum oscillation, buoyancy, and more.
+**Phyzzle** helps students and educators explore core physics concepts through real-time, interactive 3D simulations such as projectile motion, pendulum oscillation, buoyancy, and more.
 
 ## 🌍 Live Deployment
 
