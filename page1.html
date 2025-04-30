@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buoyancy Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #1E88E5);
+        }
+        canvas {
+            display: block;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 280px;
+            border: 3px solid #FF9800;
+            z-index: 100;
+        }
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 280px;
+            border: 3px solid #4CAF50;
+            z-index: 100;
+        }
+        .info-panel h2, .control-panel h2 {
+            margin-top: 0;
+            color: #E65100;
+            font-size: 20px;
+            text-align: center;
+        }
+        .info-panel p {
+            margin: 8px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        .equation {
+            font-style: italic;
+            font-weight: bold;
+            color: #0277BD;
+        }
+        .controls-info {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid #4CAF50;
+            font-size: 14px;
+            color: #333;
+            z-index: 100;
+        }
+        .title-banner {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 10px 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 3px solid #FF9800;
+            z-index: 100;
+        }
+        .title-banner h1 {
+            margin: 0;
+            color: #E65100;
+            font-size: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-banner">
+        <h1>Buoyancy Simulator</h1>
+    </div>
+    
+    <div class="info-panel">
+        <h2>Physics Data</h2>
+        <p><span class="equation">F<sub>B</sub> = ρ<sub>fluid</sub> × g × V</span> - Buoyant Force</p>
+        <p><span class="equation">W = m × g</span> - Weight</p>
+        <p><span class="equation">F<sub>net</sub> = F<sub>B</sub> - W</span> - Net Force</p>
+        <div id="live-data">
+            <p>Object Density: <span id="object-density">0</span> kg/m³</p>
+            <p>Fluid Density: <span id="fluid-density">0</span> kg/m³</p>
+            <p>Buoyant Force: <span id="buoyant-force">0</span> N</p>
+            <p>Weight: <span id="weight">0</span> N</p>
+            <p>Net Force: <span id="net-force">0</span> N</p>
+            <p>State: <span id="state">Neutral</span></p>
+        </div>
+    </div>
+    <div class="controls-info">
+        Click and drag to rotate the view. Scroll to zoom in/out.
+    </div>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue background
+        
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+        
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 7);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -10;
+        directionalLight.shadow.camera.right = 10;
+        directionalLight.shadow.camera.top = 10;
+        directionalLight.shadow.camera.bottom = -10;
+        scene.add(directionalLight);
+
+        // Add a point light to make the scene more vibrant
+        const pointLight = new THREE.PointLight(0xffffcc, 0.8, 20);
+        pointLight.position.set(3, 5, 5);
+        scene.add(pointLight);
+
+        // Create the tank
+        function createTank(width, height, depth) {
+            const tankGroup = new THREE.Group();
+            
+            // Create glass material
+            const glassMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.2,
+                roughness: 0.1,
+                transmission: 0.9,
+                thickness: 0.05
+            });
+            
+            // Create the tank walls (no bottom for now)
+            // Back wall
+            const backWall = new THREE.Mesh(
+                new THREE.BoxGeometry(width, height, 0.1),
+                glassMaterial
+            );
+            backWall.position.z = -depth/2;
+            tankGroup.add(backWall);
+            
+            // Left wall
+            const leftWall = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, height, depth),
+                glassMaterial
+            );
+            leftWall.position.x = -width/2;
+            tankGroup.add(leftWall);
+            
+            // Right wall
+            const rightWall = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, height, depth),
+                glassMaterial
+            );
+            rightWall.position.x = width/2;
+            tankGroup.add(rightWall);
+            
+            // Front wall
+            const frontWall = new THREE.Mesh(
+                new THREE.BoxGeometry(width, height, 0.1),
+                glassMaterial
+            );
+            frontWall.position.z = depth/2;
+            tankGroup.add(frontWall);
+            
+            // Bottom
+            const bottom = new THREE.Mesh(
+                new THREE.BoxGeometry(width, 0.1, depth),
+                new THREE.MeshStandardMaterial({ color: 0xcccccc })
+            );
+            bottom.position.y = -height/2;
+            tankGroup.add(bottom);
+            
+            return tankGroup;
+        }
+
+        // Create water in the tank
+        function createWater(width, height, depth, waterLevel) {
+            const waterGeometry = new THREE.BoxGeometry(width - 0.2, waterLevel, depth - 0.2);
+            const waterMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x42a5f5,
+                transparent: true,
+                opacity: 0.7,
+                roughness: 0.0,
+                transmission: 0.5
+            });
+            const water = new THREE.Mesh(waterGeometry, waterMaterial);
+            water.position.y = -height/2 + waterLevel/2;
+            
+            return water;
+        }
+
+        // Create bubbles for visual effect
+        function createBubbles(count, width, height, depth) {
+            const bubblesGroup = new THREE.Group();
+            const bubbleMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.5,
+                roughness: 0.1,
+                transmission: 0.9
+            });
+            
+            for (let i = 0; i < count; i++) {
+                const size = 0.05 + Math.random() * 0.15;
+                const bubbleGeometry = new THREE.SphereGeometry(size, 16, 16);
+                const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+                
+                // Random position within the water
+                bubble.position.x = (Math.random() - 0.5) * (width - 1);
+                bubble.position.y = -height/2 + Math.random() * params.waterLevel;
+                bubble.position.z = (Math.random() - 0.5) * (depth - 1);
+                
+                // Store original y position and speed for animation
+                bubble.userData.speed = 0.01 + Math.random() * 0.03;
+                bubble.userData.originalY = bubble.position.y;
+                
+                bubblesGroup.add(bubble);
+            }
+            
+            return bubblesGroup;
+        }
+
+        // Create the floating/sinking object
+        function createObject(shape, size, material) {
+            let geometry;
+            
+            // Create geometry based on selected shape
+            switch(shape) {
+                case 'cube':
+                    geometry = new THREE.BoxGeometry(size, size, size);
+                    break;
+                case 'sphere':
+                    geometry = new THREE.SphereGeometry(size/2, 32, 32);
+                    break;
+                case 'cylinder':
+                    geometry = new THREE.CylinderGeometry(size/2, size/2, size, 32);
+                    break;
+                default:
+                    geometry = new THREE.BoxGeometry(size, size, size);
+            }
+            
+            // Create material based on selected material
+            let objectMaterial;
+            switch(material) {
+                case 'wood':
+                    objectMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0x8B4513,
+                        roughness: 0.8,
+                        metalness: 0.1
+                    });
+                    break;
+                case 'metal':
+                    objectMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0xB0B0B0,
+                        roughness: 0.3,
+                        metalness: 0.8
+                    });
+                    break;
+                case 'plastic':
+                    objectMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0xE91E63,
+                        roughness: 0.5,
+                        metalness: 0.1
+                    });
+                    break;
+                case 'custom':
+                    objectMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0x4CAF50,
+                        roughness: 0.5,
+                        metalness: 0.3
+                    });
+                    break;
+                default:
+                    objectMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0xE91E63,
+                        roughness: 0.5,
+                        metalness: 0.1
+                    });
+            }
+            
+            const object = new THREE.Mesh(geometry, objectMaterial);
+            object.castShadow = true;
+            object.receiveShadow = true;
+            
+            // Add googly eyes for fun
+            const eyesGroup = new THREE.Group();
+            const eyeGeometry = new THREE.SphereGeometry(size/6, 16, 16);
+            const eyeWhiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const eyeBlackMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            
+            // Left eye
+            const leftEye = new THREE.Group();
+            const leftEyeWhite = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+            const leftEyePupil = new THREE.Mesh(
+                new THREE.SphereGeometry(size/12, 16, 16),
+                eyeBlackMaterial
+            );
+            leftEyePupil.position.z = size/12;
+            leftEye.add(leftEyeWhite);
+            leftEye.add(leftEyePupil);
+            
+            // Right eye
+            const rightEye = new THREE.Group();
+            const rightEyeWhite = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+            const rightEyePupil = new THREE.Mesh(
+                new THREE.SphereGeometry(size/12, 16, 16),
+                eyeBlackMaterial
+            );
+            rightEyePupil.position.z = size/12;
+            rightEye.add(rightEyeWhite);
+            rightEye.add(rightEyePupil);
+            
+            // Position eyes based on shape
+            if (shape === 'sphere') {
+                leftEye.position.set(size/5, size/5, size/2 - size/10);
+                rightEye.position.set(-size/5, size/5, size/2 - size/10);
+            } else if (shape === 'cylinder') {
+                leftEye.position.set(size/5, size/3, size/2 - size/10);
+                rightEye.position.set(-size/5, size/3, size/2 - size/10);
+            } else {
+                leftEye.position.set(size/4, size/4, size/2 + 0.01);
+                rightEye.position.set(-size/4, size/4, size/2 + 0.01);
+            }
+            
+            eyesGroup.add(leftEye);
+            eyesGroup.add(rightEye);
+            
+            // Add mouth
+            let mouth;
+            if (shape === 'sphere') {
+                mouth = new THREE.Mesh(
+                    new THREE.TorusGeometry(size/4, size/30, 16, 32, Math.PI),
+                    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+                );
+                mouth.position.set(0, -size/5, size/2 - size/10);
+                mouth.rotation.z = Math.PI;
+            } else if (shape === 'cylinder') {
+                mouth = new THREE.Mesh(
+                    new THREE.TorusGeometry(size/4, size/30, 16, 32, Math.PI),
+                    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+                );
+                mouth.position.set(0, -size/5, size/2 - size/10);
+                mouth.rotation.z = Math.PI;
+            } else {
+                mouth = new THREE.Mesh(
+                    new THREE.BoxGeometry(size/2, size/10, size/50),
+                    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+                );
+                mouth.position.set(0, -size/4, size/2 + 0.02);
+            }
+            
+            eyesGroup.add(mouth);
+            object.add(eyesGroup);
+            
+            // Create arrows for forces
+            const arrowLength = size * 1.5;
+            
+            // Buoyant force arrow (blue, upward)
+            const buoyantForceArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0, -size/2, 0),
+                arrowLength,
+                0x2196F3,
+                arrowLength/4,
+                arrowLength/8
+            );
+            object.add(buoyantForceArrow);
+            object.userData.buoyantForceArrow = buoyantForceArrow;
+            
+            // Weight force arrow (red, downward)
+            const weightForceArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, -1, 0),
+                new THREE.Vector3(0, size/2, 0),
+                arrowLength,
+                0xF44336,
+                arrowLength/4,
+                arrowLength/8
+            );
+            object.add(weightForceArrow);
+            object.userData.weightForceArrow = weightForceArrow;
+            
+            // Net force arrow (green)
+            const netForceArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(size * 1.2, 0, 0),
+                arrowLength/2,
+                0x4CAF50,
+                arrowLength/6,
+                arrowLength/12
+            );
+            object.add(netForceArrow);
+            object.userData.netForceArrow = netForceArrow;
+            
+            return object;
+        }
+
+        // Create decorative fish
+        function createFish(count) {
+            const fishGroup = new THREE.Group();
+            
+            for (let i = 0; i < count; i++) {
+                const size = 0.2 + Math.random() * 0.3;
+                const fishBody = new THREE.Group();
+                
+                // Body
+                const bodyGeometry = new THREE.ConeGeometry(size, size * 2, 16);
+                const bodyMaterial = new THREE.MeshStandardMaterial({ 
+                    color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6),
+                    roughness: 0.7,
+                    metalness: 0.3
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.rotation.z = Math.PI / 2;
+                fishBody.add(body);
+                
+                // Tail
+                const tailGeometry = new THREE.ConeGeometry(size * 0.8, size, 8);
+                const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
+                tail.position.x = -size;
+                tail.rotation.z = Math.PI / 2;
+                tail.scale.y = 0.5;
+                fishBody.add(tail);
+                
+                // Eye
+                const eyeGeometry = new THREE.SphereGeometry(size * 0.2, 16, 16);
+                const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                eye.position.set(size * 0.5, size * 0.3, size * 0.3);
+                
+                const pupilGeometry = new THREE.SphereGeometry(size * 0.1, 16, 16);
+                const pupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                const pupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+                pupil.position.z = size * 0.1;
+                eye.add(pupil);
+                
+                fishBody.add(eye);
+                
+                // Random position and rotation
+                fishBody.position.set(
+                    (Math.random() - 0.5) * 8,
+                    -5 + Math.random() * 3,
+                    (Math.random() - 0.5) * 4
+                );
+                
+                fishBody.rotation.y = Math.random() * Math.PI * 2;
+                
+                // Store animation parameters
+                fishBody.userData.speed = 0.02 + Math.random() * 0.02;
+                fishBody.userData.turnSpeed = 0.005 + Math.random() * 0.01;
+                fishBody.userData.turnDirection = Math.random() > 0.5 ? 1 : -1;
+                fishBody.userData.turnTime = Math.random() * 100;
+                
+                fishGroup.add(fishBody);
+            }
+            
+            return fishGroup;
+        }
+        
+        // Create seaweed
+        function createSeaweed(count) {
+            const seaweedGroup = new THREE.Group();
+            
+            for (let i = 0; i < count; i++) {
+                const height = 2 + Math.random() * 2;
+                const segments = Math.floor(height * 5);
+                const seaweed = new THREE.Group();
+                
+                const segmentHeight = height / segments;
+                let prevSegment = null;
+                
+                for (let j = 0; j < segments; j++) {
+                    const segmentGeometry = new THREE.CylinderGeometry(0.1 - j * 0.005, 0.1 - (j + 1) * 0.005, segmentHeight, 8);
+                    const segmentMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0x2E7D32,
+                        roughness: 0.8,
+                        metalness: 0.1
+                    });
+                    const segment = new THREE.Mesh(segmentGeometry, segmentMaterial);
+                    
+                    if (prevSegment === null) {
+                        segment.position.y = segmentHeight / 2;
+                    } else {
+                        segment.position.y = segmentHeight;
+                        prevSegment.add(segment);
+                    }
+                    
+                    if (j === 0) {
+                        seaweed.add(segment);
+                    }
+                    
+                    prevSegment = segment;
+                }
+                
+                seaweed.position.set(
+                    (Math.random() - 0.5) * 8,
+                    -10,
+                    (Math.random() - 0.5) * 4
+                );
+                
+                // Store animation parameters
+                seaweed.userData.waveSpeed = 0.5 + Math.random();
+                seaweed.userData.waveAmount = 0.2 + Math.random() * 0.3;
+                seaweed.userData.offset = Math.random() * Math.PI * 2;
+                
+                seaweedGroup.add(seaweed);
+            }
+            
+            return seaweedGroup;
+        }
+
+        // Add orbit controls for camera
+        const OrbitControls = function(object, domElement) {
+            this.object = object;
+            this.domElement = domElement;
+            
+            // Rotation properties
+            this.rotateSpeed = 1.0;
+            this.zoomSpeed = 1.2;
+            
+            // Internal state
+            const scope = this;
+            const STATE = { NONE: -1, ROTATE: 0, ZOOM: 1 };
+            let state = STATE.NONE;
+            
+            // Initial position
+            const position0 = new THREE.Vector3();
+            position0.copy(object.position);
+            
+            // Events
+            const onMouseDown = function(event) {
+                event.preventDefault();
+                
+                if (event.button === 0) {
+                    state = STATE.ROTATE;
+                }
+                
+                document.addEventListener('mousemove', onMouseMove, false);
+                document.addEventListener('mouseup', onMouseUp, false);
+            };
+            
+            const onMouseMove = function(event) {
+                event.preventDefault();
+                
+                if (state === STATE.ROTATE) {
+                    const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                    const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+                    
+                    const rotSpeed = 0.002 * scope.rotateSpeed;
+                    
+                    // Rotate around Y axis (horizontal movement)
+                    scope.object.position.x = position0.x * Math.cos(movementX * rotSpeed) - position0.z * Math.sin(movementX * rotSpeed);
+                    scope.object.position.z = position0.z * Math.cos(movementX * rotSpeed) + position0.x * Math.sin(movementX * rotSpeed);
+                    
+                    // Rotate around X axis (vertical movement)
+                    const elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, movementY * rotSpeed));
+                    scope.object.position.y = position0.y - elevation * 5;
+                    
+                    scope.object.lookAt(new THREE.Vector3(0, 0, 0));
+                }
+            };
+            
+            const onMouseUp = function() {
+                document.removeEventListener('mousemove', onMouseMove, false);
+                document.removeEventListener('mouseup', onMouseUp, false);
+                state = STATE.NONE;
+                
+                // Update position0
+                position0.copy(scope.object.position);
+            };
+            
+            const onMouseWheel = function(event) {
+                event.preventDefault();
+                
+                let delta = 0;
+                
+                if (event.wheelDelta) {
+                    // WebKit / Opera / Explorer 9
+                    delta = event.wheelDelta;
+                } else if (event.detail) {
+                    // Firefox
+                    delta = -event.detail;
+                }
+                
+                const zoomFactor = 0.1 * scope.zoomSpeed;
+                
+                if (delta > 0) {
+                    // Zoom in
+                    scope.object.position.multiplyScalar(1 - zoomFactor);
+                } else {
+                    // Zoom out
+                    scope.object.position.multiplyScalar(1 + zoomFactor);
+                }
+                
+                position0.copy(scope.object.position);
+            };
+            
+            // Event listeners
+            this.domElement.addEventListener('mousedown', onMouseDown, false);
+            this.domElement.addEventListener('wheel', onMouseWheel, false);
+            this.domElement.addEventListener('DOMMouseScroll', onMouseWheel, false); // Firefox
+            
+            this.update = function() {
+                scope.object.lookAt(new THREE.Vector3(0, 0, 0));
+            };
+        };
+        
+        const controls = new OrbitControls(camera, renderer.domElement);
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Parameters for simulation
+        const params = {
+            // Tank parameters
+            tankWidth: 10,
+            tankHeight: 10,
+            tankDepth: 6,
+            waterLevel: 8,
+            fluidDensity: 1000, // kg/m³ (water)
+            
+            // Object parameters
+            objectShape: 'cube',
+            objectSize: 1.0, // m
+            objectMaterial: 'plastic',
+            objectDensity: 800, // kg/m³
+            
+            // Physics
+            gravity: 9.81, // m/s²
+            
+            // Visualization
+            showForces: true,
+            startSimulation: function() {
+                resetSimulation();
+                simulationRunning = true;
+            },
+            pauseSimulation: function() {
+                simulationRunning = !simulationRunning;
+            },
+            resetSimulation: resetSimulation
+        };
+
+        // Material densities (kg/m³)
+        const materialDensities = {
+            'wood': 700,
+            'plastic': 900,
+            'metal': 7800,
+            'custom': 800
+        };
+
+        // Create the scene elements
+        let tank, water, floatingObject, bubbles, fish, seaweed;
+        let simulationRunning = false;
+        let objectVelocity = 0;
+        let waterSpill;
+let waterDisplacement = 0;
+let isSpilling = false;
+        const clock = new THREE.Clock();
+
+        function initializeScene() {
+            // Create tank
+            tank = createTank(params.tankWidth, params.tankHeight, params.tankDepth);
+            scene.add(tank);
+            
+            // Create water
+            water = createWater(params.tankWidth, params.tankHeight, params.tankDepth, params.waterLevel);
+            scene.add(water);
+            
+            // Create floating object
+            params.objectDensity = materialDensities[params.objectMaterial];
+            floatingObject = createObject(params.objectShape, params.objectSize, params.objectMaterial);
+            scene.add(floatingObject);
+            
+            // Create bubbles
+            bubbles = createBubbles(30, params.tankWidth, params.tankHeight, params.tankDepth);
+            scene.add(bubbles);
+            
+            // Create fish
+            fish = createFish(8);
+            scene.add(fish);
+            
+            // Create seaweed
+            seaweed = createSeaweed(10);
+            scene.add(seaweed);
+            waterSpill = new THREE.Group();
+scene.add(waterSpill);
+            
+            // Reset the simulation
+            resetSimulation();
+        }
+
+        // Reset simulation
+      // Reset simulation
+function resetSimulation() {
+    simulationRunning = false;
+    objectVelocity = 0;
+    
+    // Clear any water spill
+    while (waterSpill.children.length > 0) {
+        waterSpill.remove(waterSpill.children[0]);
+    }
+    
+    if (floatingObject) {
+        // Position the object above the water
+        floatingObject.position.y = 2;
+        
+        // Update object density based on material
+        if (params.objectMaterial !== 'custom') {
+            params.objectDensity = materialDensities[params.objectMaterial];
+        }
+        
+        // Show/hide force arrows
+        floatingObject.userData.buoyantForceArrow.visible = params.showForces;
+        floatingObject.userData.weightForceArrow.visible = params.showForces;
+        floatingObject.userData.netForceArrow.visible = params.showForces;
+        
+        updatePhysicsDisplay();
+    }
+}
+
+        // Function to update water
+        function updateWater() {
+            if (water) {
+                scene.remove(water);
+            }
+            water = createWater(params.tankWidth, params.tankHeight, params.tankDepth, params.waterLevel);
+            scene.add(water);
+        }
+
+        // Function to update floating object
+       // Function to update floating object
+function updateFloatingObject() {
+    if (floatingObject) {
+        scene.remove(floatingObject);
+    }
+    
+    floatingObject = createObject(params.objectShape, params.objectSize, params.objectMaterial);
+    scene.add(floatingObject);
+    
+    // Calculate water displacement when object size changes
+    const oldVolume = waterDisplacement;
+    const newVolume = calculateObjectVolume();
+    const volumeDifference = newVolume - oldVolume;
+    
+    // Update water level if object is partially or fully submerged
+    if (simulationRunning && volumeDifference > 0) {
+        const waterSurface = -params.tankHeight/2 + params.waterLevel;
+        const objectBottom = floatingObject.position.y - params.objectSize/2;
+        
+        if (objectBottom < waterSurface) {
+            // Calculate how much of the volume difference is submerged
+            const submergedProportion = Math.min(1, (waterSurface - objectBottom) / params.objectSize);
+            const displacedVolume = volumeDifference * submergedProportion;
+            
+            // Increase water level based on displaced volume
+            const waterLevelIncrease = displacedVolume / (params.tankWidth * params.tankDepth);
+            params.waterLevel += waterLevelIncrease;
+            
+            // Check if water would spill
+            if (params.waterLevel > params.tankHeight) {
+                const spillAmount = (params.waterLevel - params.tankHeight);
+                params.waterLevel = params.tankHeight;
+                
+                // Create spill effect
+                const newSpill = createWaterSpill(spillAmount);
+                waterSpill.add(newSpill);
+            }
+            
+            updateWater();
+        }
+    }
+    
+    waterDisplacement = newVolume;
+    resetSimulation();
+}
+
+        // Calculate object volume based on shape
+        // Calculate object volume based on shape
+        function calculateObjectVolume() {
+            let volume;
+            switch(params.objectShape) {
+                case 'cube':
+                    volume = Math.pow(params.objectSize, 3);
+                    break;
+                case 'sphere':
+                    volume = (4/3) * Math.PI * Math.pow(params.objectSize/2, 3);
+                    break;
+                case 'cylinder':
+                    volume = Math.PI * Math.pow(params.objectSize/2, 2) * params.objectSize;
+                    break;
+                default:
+                    volume = Math.pow(params.objectSize, 3);
+            }
+            return volume;
+        }
+        // Create water spill effect
+function createWaterSpill(amount) {
+    const spillGroup = new THREE.Group();
+    const dropCount = Math.floor(amount * 20);
+    
+    const dropMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x42a5f5,
+        transparent: true,
+        opacity: 0.7,
+        roughness: 0.0,
+        transmission: 0.5
+    });
+    
+    for (let i = 0; i < dropCount; i++) {
+        const size = 0.1 + Math.random() * 0.2;
+        const dropGeometry = new THREE.SphereGeometry(size, 8, 8);
+        const drop = new THREE.Mesh(dropGeometry, dropMaterial);
+        
+        // Position drops along the tank edges
+        const side = Math.floor(Math.random() * 4);
+        let x, y, z;
+        
+        switch(side) {
+            case 0: // Left side
+                x = -params.tankWidth/2;
+                z = (Math.random() - 0.5) * params.tankDepth;
+                break;
+            case 1: // Right side
+                x = params.tankWidth/2;
+                z = (Math.random() - 0.5) * params.tankDepth;
+                break;
+            case 2: // Front side
+                x = (Math.random() - 0.5) * params.tankWidth;
+                z = params.tankDepth/2;
+                break;
+            case 3: // Back side
+                x = (Math.random() - 0.5) * params.tankWidth;
+                z = -params.tankDepth/2;
+                break;
+        }
+        
+        y = -params.tankHeight/2 + params.waterLevel + Math.random() * 0.5;
+        drop.position.set(x, y, z);
+        
+        // Add physics properties for animation
+        drop.userData.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.2,
+            0,
+            (Math.random() - 0.5) * 0.2
+        );
+        drop.userData.lifetime = 2 + Math.random() * 2;
+        drop.userData.age = 0;
+        
+        spillGroup.add(drop);
+    }
+    
+    return spillGroup;
+}
+
+        // Calculate submerged volume
+        function calculateSubmergedVolume() {
+            if (!floatingObject) return 0;
+            
+            const objectBottom = floatingObject.position.y - params.objectSize/2;
+            const objectTop = floatingObject.position.y + params.objectSize/2;
+            const waterSurface = -params.tankHeight/2 + params.waterLevel;
+            
+            // If object is completely above water
+            if (objectBottom >= waterSurface) {
+                return 0;
+            }
+            
+            // If object is completely underwater
+            if (objectTop <= waterSurface) {
+                return calculateObjectVolume();
+            }
+            
+            // If object is partially submerged
+            let submergedProportion;
+            switch(params.objectShape) {
+                case 'cube':
+                    submergedProportion = (waterSurface - objectBottom) / params.objectSize;
+                    return Math.pow(params.objectSize, 2) * (waterSurface - objectBottom);
+                case 'sphere':
+                    // Approximate submerged volume of sphere (cap formula)
+                    const radius = params.objectSize / 2;
+                    const h = waterSurface - (floatingObject.position.y - radius);
+                    if (h <= 0) return 0;
+                    if (h >= params.objectSize) return (4/3) * Math.PI * Math.pow(radius, 3);
+                    return (1/3) * Math.PI * h * h * (3 * radius - h);
+                case 'cylinder':
+                    // For simplicity, treat as a rectangular prism for partial submersion
+                    submergedProportion = (waterSurface - objectBottom) / params.objectSize;
+                    return Math.PI * Math.pow(params.objectSize/2, 2) * (waterSurface - objectBottom);
+                default:
+                    submergedProportion = (waterSurface - objectBottom) / params.objectSize;
+                    return Math.pow(params.objectSize, 3) * submergedProportion;
+            }
+        }
+
+        // Calculate physical forces
+        function calculateForces() {
+            if (!floatingObject) return { buoyantForce: 0, weight: 0, netForce: 0 };
+            
+            // Calculate volume and mass
+            const volume = calculateObjectVolume();
+            const mass = volume * params.objectDensity;
+            
+            // Calculate weight (F = m * g)
+            const weight = mass * params.gravity;
+            
+            // Calculate buoyant force (F = ρ * g * V_submerged)
+            const submergedVolume = calculateSubmergedVolume();
+            const buoyantForce = params.fluidDensity * params.gravity * submergedVolume;
+            
+            // Calculate net force
+            const netForce = buoyantForce - weight;
+            
+            return { buoyantForce, weight, netForce };
+        }
+
+        // Update physics display
+        function updatePhysicsDisplay() {
+            if (!floatingObject) return;
+            
+            const forces = calculateForces();
+            const volume = calculateObjectVolume();
+            
+            // Update HTML elements
+            document.getElementById('object-density').textContent = params.objectDensity.toFixed(0);
+            document.getElementById('fluid-density').textContent = params.fluidDensity.toFixed(0);
+            document.getElementById('buoyant-force').textContent = forces.buoyantForce.toFixed(2);
+            document.getElementById('weight').textContent = forces.weight.toFixed(2);
+            document.getElementById('net-force').textContent = forces.netForce.toFixed(2);
+            
+            // Update state display
+            let state;
+            if (Math.abs(forces.netForce) < 0.1) {
+                state = "Neutral Buoyancy";
+            } else if (forces.netForce > 0) {
+                state = "Positive Buoyancy (Floating)";
+            } else {
+                state = "Negative Buoyancy (Sinking)";
+            }
+            document.getElementById('state').textContent = state;
+            
+            // Update force arrows
+            const arrowScale = params.objectSize * 0.5;
+            
+            // Buoyant force arrow (blue, upward)
+            const buoyantForceArrow = floatingObject.userData.buoyantForceArrow;
+            buoyantForceArrow.setLength(
+                Math.min(forces.buoyantForce * arrowScale / 20, params.objectSize * 3),
+                params.objectSize * 0.3,
+                params.objectSize * 0.15
+            );
+            buoyantForceArrow.visible = params.showForces && forces.buoyantForce > 0.1;
+            
+            // Weight force arrow (red, downward)
+            const weightForceArrow = floatingObject.userData.weightForceArrow;
+            weightForceArrow.setLength(
+                Math.min(forces.weight * arrowScale / 20, params.objectSize * 3),
+                params.objectSize * 0.3,
+                params.objectSize * 0.15
+            );
+            weightForceArrow.visible = params.showForces;
+            
+            // Net force arrow (green)
+            const netForceArrow = floatingObject.userData.netForceArrow;
+            netForceArrow.setDirection(new THREE.Vector3(0, Math.sign(forces.netForce), 0));
+            netForceArrow.setLength(
+                Math.min(Math.abs(forces.netForce) * arrowScale / 10, params.objectSize * 2),
+                params.objectSize * 0.2,
+                params.objectSize * 0.1
+            );
+            netForceArrow.visible = params.showForces && Math.abs(forces.netForce) > 0.1;
+        }
+
+        // Update animation
+        function updateAnimation(deltaTime) {
+            // Animate bubbles
+            bubbles.children.forEach(bubble => {
+                bubble.position.y += bubble.userData.speed;
+                bubble.position.x += (Math.random() - 0.5) * 0.01;
+                
+                // Reset if bubble reaches top of water
+                if (bubble.position.y > -params.tankHeight/2 + params.waterLevel) {
+                    bubble.position.y = bubble.userData.originalY;
+                }
+
+
+            });
+            
+            // Animate fish
+            fish.children.forEach(fishBody => {
+                // Move forward
+                fishBody.translateX(fishBody.userData.speed);
+                
+                // Handle turning
+                fishBody.userData.turnTime -= deltaTime;
+                if (fishBody.userData.turnTime <= 0) {
+                    fishBody.userData.turnDirection = -fishBody.userData.turnDirection;
+                    fishBody.userData.turnTime = 50 + Math.random() * 100;
+                }
+                fishBody.rotateY(fishBody.userData.turnSpeed * fishBody.userData.turnDirection);
+                
+                // Contain within tank
+                const tankLimit = params.tankWidth / 2 - 1;
+                if (fishBody.position.x > tankLimit || fishBody.position.x < -tankLimit ||
+                    fishBody.position.z > params.tankDepth/2 - 1 || fishBody.position.z < -params.tankDepth/2 + 1) {
+                    fishBody.rotateY(Math.PI);
+                }
+            });
+            
+            // Animate seaweed
+            seaweed.children.forEach(plant => {
+                const segments = plant.children[0];
+                
+                // Apply wave effect to each segment
+                for (let i = 0; i < segments.children.length; i++) {
+                    const segment = segments.children[i];
+                    const waveTime = clock.getElapsedTime() * plant.userData.waveSpeed + plant.userData.offset;
+                    const waveAmount = plant.userData.waveAmount * (i + 1) / segments.children.length;
+                    
+                    segment.rotation.x = Math.sin(waveTime) * waveAmount;
+                    segment.rotation.z = Math.cos(waveTime * 0.7) * waveAmount * 0.7;
+                }
+            });
+            
+            // Animate eyes of the floating object
+            if (floatingObject) {
+                const eyesGroup = floatingObject.children[0];
+                if (eyesGroup) {
+                    const leftEye = eyesGroup.children[0];
+                    const rightEye = eyesGroup.children[1];
+                    
+                    if (leftEye && leftEye.children.length > 1) {
+                        const leftPupil = leftEye.children[1];
+                        const rightPupil = rightEye.children[1];
+                        
+                        // Make eyes follow movement
+                        const t = clock.getElapsedTime();
+                        leftPupil.position.x = Math.sin(t * 0.5) * params.objectSize * 0.05;
+                        leftPupil.position.y = Math.cos(t * 0.7) * params.objectSize * 0.05;
+                        
+                        rightPupil.position.x = Math.sin(t * 0.5) * params.objectSize * 0.05;
+                        rightPupil.position.y = Math.cos(t * 0.7) * params.objectSize * 0.05;
+                    }
+                }
+            }
+
+            // Animate water spill
+if (waterSpill) {
+    const dropsToRemove = [];
+    
+    waterSpill.children.forEach((group, groupIndex) => {
+        let allDropsExpired = true;
+        
+        group.children.forEach((drop, dropIndex) => {
+            // Update drop position
+            drop.position.x += drop.userData.velocity.x;
+            drop.position.y -= 0.05; // Gravity
+            drop.position.z += drop.userData.velocity.z;
+            
+            // Update lifetime
+            drop.userData.age += deltaTime;
+            if (drop.userData.age < drop.userData.lifetime) {
+                allDropsExpired = false;
+                
+                // Make drops fade out over time
+                const remainingLife = 1 - (drop.userData.age / drop.userData.lifetime);
+                drop.material.opacity = 0.7 * remainingLife;
+                drop.scale.multiplyScalar(0.99);
+            }
+        });
+        
+        if (allDropsExpired) {
+            dropsToRemove.push(groupIndex);
+        }
+    });
+    
+    // Remove expired drop groups
+    for (let i = dropsToRemove.length - 1; i >= 0; i--) {
+        waterSpill.remove(waterSpill.children[dropsToRemove[i]]);
+    }
+}
+
+
+        }
+
+        // Physics simulation update
+        function updatePhysics(deltaTime) {
+            if (!simulationRunning || !floatingObject) return;
+            
+            // Calculate forces
+            const forces = calculateForces();
+            const volume = calculateObjectVolume();
+            const mass = volume * params.objectDensity;
+            
+            // Calculate acceleration (F = ma => a = F/m)
+            const acceleration = forces.netForce / mass;
+            
+            // Update velocity (v = v₀ + at)
+            objectVelocity += acceleration * deltaTime;
+            
+            // Apply drag force to dampen motion when in fluid
+            const submergedVolume = calculateSubmergedVolume();
+            const dragCoefficient = 5.0 * (submergedVolume / volume); // Higher when more submerged
+            objectVelocity *= (1 - Math.min(dragCoefficient * deltaTime, 0.9));
+            
+            // Update position (p = p₀ + vt)
+            floatingObject.position.y += objectVelocity * deltaTime;
+
+            // Calculate water displacement
+if (floatingObject) {
+    const submergedVolume = calculateSubmergedVolume();
+    const newWaterLevel = params.waterLevel + (submergedVolume / (params.tankWidth * params.tankDepth));
+    
+    // Check if water would spill
+    if (newWaterLevel > params.tankHeight) {
+        const spillAmount = (newWaterLevel - params.tankHeight) * 0.1;
+        if (!isSpilling && spillAmount > 0.01) {
+            isSpilling = true;
+            const newSpill = createWaterSpill(spillAmount);
+            waterSpill.add(newSpill);
+            
+            // Reduce water level slightly to simulate water loss
+            params.waterLevel = Math.max(params.waterLevel - spillAmount * 0.2, 0);
+            updateWater();
+            
+            // Reset spill flag after a delay
+            setTimeout(() => {
+                isSpilling = false;
+            }, 500);
+        }
+    }
+}
+            
+            // Constraints
+            const minY = -params.tankHeight/2 + params.objectSize/2 + 0.1;
+            const maxY = params.tankHeight/2 - params.objectSize/2;
+            
+            if (floatingObject.position.y < minY) {
+                floatingObject.position.y = minY;
+                if (objectVelocity < 0) {
+                    objectVelocity = -objectVelocity * 0.3; // Bounce with energy loss
+                }
+            }
+            
+            if (floatingObject.position.y > maxY) {
+                floatingObject.position.y = maxY;
+                if (objectVelocity > 0) {
+                    objectVelocity = -objectVelocity * 0.3; // Bounce with energy loss
+                }
+            }
+            
+            // Update physics display
+            updatePhysicsDisplay();
+        }
+
+        // Setup GUI
+        function setupGUI() {
+        // Create a container for the GUI
+        const guiContainer = document.createElement('div');
+        guiContainer.className = 'control-panel';
+        guiContainer.innerHTML = '<h2>Controls</h2>';
+        document.body.appendChild(guiContainer);
+        
+        const gui = new dat.GUI({ autoPlace: false });
+        guiContainer.appendChild(gui.domElement);
+        gui.width = 250;
+        
+        // Material folder
+        const materialFolder = gui.addFolder('Object Properties');
+        materialFolder.add(params, 'objectShape', ['cube', 'sphere', 'cylinder']).name('Shape').onChange(updateFloatingObject);
+        materialFolder.add(params, 'objectMaterial', ['wood', 'plastic', 'metal', 'custom']).name('Material').onChange(function() {
+            if (params.objectMaterial !== 'custom') {
+                params.objectDensity = materialDensities[params.objectMaterial];
+            }
+            updateFloatingObject();
+        });
+        materialFolder.add(params, 'objectSize', 0.5, 2.0).name('Size (m)').onChange(updateFloatingObject);
+        materialFolder.add(params, 'objectDensity', 100, 10000).name('Density (kg/m³)').onChange(function() {
+            params.objectMaterial = 'custom';
+            updatePhysicsDisplay();
+        });
+        materialFolder.open();
+        
+        // Fluid folder
+        const fluidFolder = gui.addFolder('Fluid Properties');
+        fluidFolder.add(params, 'fluidDensity', 500, 5000).name('Density (kg/m³)').onChange(updatePhysicsDisplay);
+        fluidFolder.add(params, 'waterLevel', 0, params.tankHeight).name('Water Level (m)').onChange(updateWater);
+        fluidFolder.open();
+        
+        // Physics folder
+        const physicsFolder = gui.addFolder('Physics');
+        physicsFolder.add(params, 'gravity', 1, 20).name('Gravity (m/s²)').onChange(updatePhysicsDisplay);
+        physicsFolder.add(params, 'showForces').name('Show Forces').onChange(function() {
+            if (floatingObject) {
+                floatingObject.userData.buoyantForceArrow.visible = params.showForces;
+                floatingObject.userData.weightForceArrow.visible = params.showForces;
+                floatingObject.userData.netForceArrow.visible = params.showForces;
+            }
+        });
+        physicsFolder.open();
+        
+        // Simulation controls
+        const simulationFolder = gui.addFolder('Simulation Controls');
+        simulationFolder.add(params, 'startSimulation').name('Start/Drop Object');
+        simulationFolder.add(params, 'pauseSimulation').name('Pause/Resume');
+        simulationFolder.add(params, 'resetSimulation').name('Reset');
+        simulationFolder.open();
+    }
+        // Initialize everything
+        initializeScene();
+        setupGUI();
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = Math.min(clock.getDelta(), 0.1);
+            
+            // Update physics
+            updatePhysics(deltaTime);
+            
+            // Update animations
+            updateAnimation(deltaTime);
+            
+            // Update controls
+            controls.update();
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
+        

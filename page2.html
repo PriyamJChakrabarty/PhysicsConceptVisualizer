@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circular Motion Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+        }
+        canvas {
+            display: block;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 250px;
+            border: 3px solid #FF9800;
+        }
+        .info-panel h2 {
+            margin-top: 0;
+            color: #FF5722;
+            font-size: 20px;
+            text-align: center;
+        }
+        .info-panel p {
+            margin: 8px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        .equation {
+            font-style: italic;
+            font-weight: bold;
+            color: #0277BD;
+        }
+        .controls-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid #4CAF50;
+            font-size: 14px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <h2>Circular Motion</h2>
+        <p><span class="equation">v = r × ω</span> - Velocity</p>
+        <p><span class="equation">a<sub>c</sub> = v²/r = r × ω²</span> - Centripetal acceleration</p>
+        <p><span class="equation">F<sub>c</sub> = m × a<sub>c</sub></span> - Centripetal force</p>
+        <p><span class="equation">T = 2π/ω</span> - Period</p>
+        <div id="live-data">
+            <p>Period: <span id="period">0</span> s</p>
+            <p>Velocity: <span id="velocity">0</span> m/s</p>
+            <p>Centripetal Acceleration: <span id="acceleration">0</span> m/s²</p>
+            <p>Centripetal Force: <span id="force">0</span> N</p>
+        </div>
+    </div>
+    <div class="controls-info">
+        Click and drag to rotate the view. Scroll to zoom in/out.
+    </div>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xE0F7FA);
+        
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+        
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 7);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -10;
+        directionalLight.shadow.camera.right = 10;
+        directionalLight.shadow.camera.top = 10;
+        directionalLight.shadow.camera.bottom = -10;
+        scene.add(directionalLight);
+
+        // Grid helper for scale reference
+        const gridHelper = new THREE.GridHelper(30, 30, 0x888888, 0xCCCCCC);
+        scene.add(gridHelper);
+        
+        // Create a plane as the ground
+        const groundGeometry = new THREE.PlaneGeometry(50, 50);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x7cfc00, // Light green
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+
+
+        // Add amusement park background elements
+        function createAmusementPark() {
+            // Ferris wheel
+            const ferrisWheelGroup = new THREE.Group();
+            ferrisWheelGroup.position.set(-15, 0, -15);
+            
+            // Base/stand for the ferris wheel
+            const standGeometry = new THREE.BoxGeometry(2, 10, 2);
+            const standMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const stand = new THREE.Mesh(standGeometry, standMaterial);
+            stand.position.y = 5;
+            stand.castShadow = true;
+            stand.receiveShadow = true;
+            ferrisWheelGroup.add(stand);
+            
+            // Wheel structure
+            const wheelGeometry = new THREE.TorusGeometry(7, 0.5, 16, 100);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
+            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel.position.y = 10;
+            wheel.rotation.x = Math.PI / 2;
+            wheel.castShadow = true;
+            wheel.receiveShadow = true;
+            ferrisWheelGroup.add(wheel);
+            
+            // Add cabins to the wheel
+            const cabinCount = 8;
+            for (let i = 0; i < cabinCount; i++) {
+                const angle = (i / cabinCount) * Math.PI * 2;
+                const cabinGeometry = new THREE.BoxGeometry(1, 1.5, 1);
+                const cabinMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x1E90FF - (i * 50000),  // Slightly different colors
+                    metalness: 0.3,
+                    roughness: 0.7
+                });
+                const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+                cabin.position.y = 10 + Math.sin(angle) * 7;
+                cabin.position.z = Math.cos(angle) * 7;
+                cabin.castShadow = true;
+                cabin.receiveShadow = true;
+                ferrisWheelGroup.add(cabin);
+            }
+            
+            scene.add(ferrisWheelGroup);
+            
+            // Roller coaster
+            const coasterGroup = new THREE.Group();
+            coasterGroup.position.set(15, 0, -15);
+            
+            // Support structures
+            const supportCount = 5;
+            for (let i = 0; i < supportCount; i++) {
+                const height = 3 + Math.sin(i * 0.9) * 2;
+                const supportGeometry = new THREE.CylinderGeometry(0.3, 0.3, height, 8);
+                const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                const support = new THREE.Mesh(supportGeometry, supportMaterial);
+                support.position.set(i * 2 - 4, height / 2, 0);
+                support.castShadow = true;
+                support.receiveShadow = true;
+                coasterGroup.add(support);
+            }
+            
+            // Track
+            const trackPoints = [];
+            for (let i = 0; i <= 20; i++) {
+                const t = i / 20;
+                const x = (i - 10) * 0.6;
+                const y = 3 + Math.sin(i * 0.4) * 2 + Math.cos(i * 0.7) * 1.5;
+                const z = Math.sin(i * 0.3) * 1.2;
+                trackPoints.push(new THREE.Vector3(x, y, z));
+            }
+            
+            const trackCurve = new THREE.CatmullRomCurve3(trackPoints);
+            const trackGeometry = new THREE.TubeGeometry(trackCurve, 64, 0.2, 8, false);
+            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0xFF4500 });
+            const track = new THREE.Mesh(trackGeometry, trackMaterial);
+            track.castShadow = true;
+            track.receiveShadow = true;
+            coasterGroup.add(track);
+            
+            // Add a car on the track
+            const carGeometry = new THREE.BoxGeometry(1, 0.5, 0.7);
+            const carMaterial = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
+            const car = new THREE.Mesh(carGeometry, carMaterial);
+            const initialPosition = trackCurve.getPointAt(0);
+            car.position.copy(initialPosition);
+            car.castShadow = true;
+            car.receiveShadow = true;
+            coasterGroup.add(car);
+            
+            scene.add(coasterGroup);
+            
+            // Carousel
+            const carouselGroup = new THREE.Group();
+            carouselGroup.position.set(0, 0, -20);
+            
+            // Base
+            const carouselBaseGeometry = new THREE.CylinderGeometry(4, 4, 0.5, 32);
+            const carouselBaseMaterial = new THREE.MeshStandardMaterial({ color: 0xE0E0E0 });
+            const carouselBase = new THREE.Mesh(carouselBaseGeometry, carouselBaseMaterial);
+            carouselBase.position.y = 0.25;
+            carouselBase.receiveShadow = true;
+            carouselGroup.add(carouselBase);
+            
+            // Roof
+            const roofGeometry = new THREE.ConeGeometry(4.5, 3, 32);
+            const roofMaterial = new THREE.MeshStandardMaterial({ color: 0xFF69B4 });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 6;
+            roof.castShadow = true;
+            roof.receiveShadow = true;
+            carouselGroup.add(roof);
+            
+            // Center pole
+            const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 5, 16);
+            const poleMaterial = new THREE.MeshStandardMaterial({ color: 0xDEB887 });
+            const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+            pole.position.y = 2.5;
+            pole.castShadow = true;
+            pole.receiveShadow = true;
+            carouselGroup.add(pole);
+            
+            // Horses
+            const horseCount = 6;
+            for (let i = 0; i < horseCount; i++) {
+                const angle = (i / horseCount) * Math.PI * 2;
+                
+                // Simple horse shape (box + cylinder)
+                const horseGroup = new THREE.Group();
+                
+                const horseBodyGeometry = new THREE.BoxGeometry(0.8, 0.5, 1.5);
+                const horseMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xFFFFFF - (i * 1000000),  // Different color for each horse
+                    roughness: 0.7
+                });
+                const horseBody = new THREE.Mesh(horseBodyGeometry, horseMaterial);
+                horseBody.position.y = 0.25;
+                horseGroup.add(horseBody);
+                
+                const neckGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
+                const neck = new THREE.Mesh(neckGeometry, horseMaterial);
+                neck.position.set(0, 0.5, -0.6);
+                neck.rotation.x = -Math.PI / 4;
+                horseGroup.add(neck);
+                
+                const headGeometry = new THREE.BoxGeometry(0.4, 0.5, 0.6);
+                const head = new THREE.Mesh(headGeometry, horseMaterial);
+                head.position.set(0, 0.8, -0.9);
+                horseGroup.add(head);
+                
+                const poleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3, 8);
+                const poleMaterial = new THREE.MeshStandardMaterial({ color: 0xC0C0C0 });
+                const horsePole = new THREE.Mesh(poleGeometry, poleMaterial);
+                horsePole.position.y = -1;
+                horseGroup.add(horsePole);
+                
+                horseGroup.position.set(Math.cos(angle) * 3, 2 + Math.sin(i * 1.5) * 0.3, Math.sin(angle) * 3);
+                horseGroup.rotation.y = -angle + Math.PI / 2;
+                
+                horseGroup.castShadow = true;
+                horseGroup.receiveShadow = true;
+                carouselGroup.add(horseGroup);
+            }
+            
+            scene.add(carouselGroup);
+            
+            // Balloon stand
+            const balloonGroup = new THREE.Group();
+            balloonGroup.position.set(-12, 0, 5);
+            
+            // Stand
+            const balloonStandGeometry = new THREE.BoxGeometry(2, 1, 2);
+            const balloonStandMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const balloonStand = new THREE.Mesh(balloonStandGeometry, balloonStandMaterial);
+            balloonStand.position.y = 0.5;
+            balloonStand.castShadow = true;
+            balloonStand.receiveShadow = true;
+            balloonGroup.add(balloonStand);
+            
+            // Balloons
+            const balloonColors = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF];
+            for (let i = 0; i < 5; i++) {
+                const balloonGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const balloonMaterial = new THREE.MeshStandardMaterial({ 
+                    color: balloonColors[i],
+                    roughness: 0.2,
+                    metalness: 0.1
+                });
+                const balloon = new THREE.Mesh(balloonGeometry, balloonMaterial);
+                
+                // Position balloons in a bouquet shape
+                const angle = (i / 5) * Math.PI * 2;
+                const radius = 0.3;
+                balloon.position.set(
+                    Math.cos(angle) * radius, 
+                    3 + Math.sin(i * 0.7) * 0.5, 
+                    Math.sin(angle) * radius
+                );
+                
+                balloon.castShadow = true;
+                balloon.receiveShadow = true;
+                balloonGroup.add(balloon);
+                
+                // Add string to balloon
+                const stringGeometry = new THREE.CylinderGeometry(0.02, 0.02, balloon.position.y - 0.5, 8);
+                const stringMaterial = new THREE.MeshStandardMaterial({ color: 0xDDDDDD });
+                const string = new THREE.Mesh(stringGeometry, stringMaterial);
+                string.position.y = (balloon.position.y - 0.5) / 2;
+                string.castShadow = true;
+                balloonGroup.add(string);
+            }
+            
+            scene.add(balloonGroup);
+
+
+            
+            
+            // Animation callbacks for amusement park elements
+            return {
+                animateFerrisWheel: function(time) {
+                    wheel.rotation.z = time * 0.2;
+                },
+                animateCoaster: function(time) {
+                    const position = trackCurve.getPointAt((Math.sin(time * 0.5) + 1) / 2);
+                    car.position.copy(position);
+                    
+                    // Orient the car to the track
+                    const tangent = trackCurve.getTangentAt((Math.sin(time * 0.5) + 1) / 2);
+                    const lookAtPos = position.clone().add(tangent);
+                    car.lookAt(lookAtPos);
+                    car.rotation.y += Math.PI / 2;
+                },
+                animateCarousel: function(time) {
+                    carouselGroup.rotation.y = time * 0.3;
+                },
+                animateBalloons: function(time) {
+                    // Make balloons float gently
+                    balloonGroup.children.forEach((child, index) => {
+                        if (child.geometry && child.geometry.type === "SphereGeometry") {
+                            child.position.y += Math.sin(time * 2 + index) * 0.01;
+                        }
+                    });
+                }
+            };
+        }
+
+        // Initialize amusement park and store animation functions
+        const parkAnimations = createAmusementPark();
+
+
+
+        // Create orbit path
+        let orbitPath;
+        function createOrbitPath(radius) {
+            if (orbitPath) scene.remove(orbitPath);
+            const orbitGeometry = new THREE.TorusGeometry(radius, 0.05, 16, 100);
+            const orbitMaterial = new THREE.MeshStandardMaterial({ color: 0x3498db });
+            orbitPath = new THREE.Mesh(orbitGeometry, orbitMaterial);
+            orbitPath.rotation.x = Math.PI / 2;
+            orbitPath.position.y = 0.05;  // Slightly above ground
+            orbitPath.receiveShadow = true;
+            orbitPath.castShadow = true;
+            scene.add(orbitPath);
+        }
+
+        // Create the central pivot point
+        const pivotGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1, 32);
+        const pivotMaterial = new THREE.MeshStandardMaterial({ color: 0xff4500 });
+        const pivot = new THREE.Mesh(pivotGeometry, pivotMaterial);
+        pivot.position.y = 0.5;
+        pivot.castShadow = true;
+        pivot.receiveShadow = true;
+        scene.add(pivot);
+
+        // Create the rotating object
+        let rotatingObject;
+        function createRotatingObject(mass) {
+            if (rotatingObject) {
+                rotatingObjectGroup.remove(rotatingObject);
+            }
+            
+            // Base sphere
+            const radius = Math.pow(mass, 1/3) * 0.3;  // Scale radius based on mass
+            const objectGeometry = new THREE.SphereGeometry(radius, 32, 32);
+            const objectMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xff9800,
+                roughness: 0.5,
+                metalness: 0.3
+            });
+            rotatingObject = new THREE.Mesh(objectGeometry, objectMaterial);
+            rotatingObject.castShadow = true;
+            rotatingObject.receiveShadow = true;
+            
+            // Add googly eyes for cartoonish look
+            const eyeGeometry = new THREE.SphereGeometry(radius * 0.3, 32, 32);
+            const eyeWhiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const eyeBlackMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            
+            // Left eye
+            const leftEyeWhite = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+            leftEyeWhite.position.set(radius * 0.5, radius * 0.4, radius * 0.7);
+            leftEyeWhite.scale.set(1, 1, 0.5);
+            rotatingObject.add(leftEyeWhite);
+            
+            const leftEyePupil = new THREE.Mesh(
+                new THREE.SphereGeometry(radius * 0.15, 32, 32),
+                eyeBlackMaterial
+            );
+            leftEyePupil.position.set(0, 0, radius * 0.3);
+            leftEyeWhite.add(leftEyePupil);
+            
+            // Right eye
+            const rightEyeWhite = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+            rightEyeWhite.position.set(-radius * 0.5, radius * 0.4, radius * 0.7);
+            rightEyeWhite.scale.set(1, 1, 0.5);
+            rotatingObject.add(rightEyeWhite);
+            
+            const rightEyePupil = new THREE.Mesh(
+                new THREE.SphereGeometry(radius * 0.15, 32, 32),
+                eyeBlackMaterial
+            );
+            rightEyePupil.position.set(0, 0, radius * 0.3);
+            rightEyeWhite.add(rightEyePupil);
+            
+            // Add smile
+            const smileGeometry = new THREE.TorusGeometry(radius * 0.4, radius * 0.07, 16, 32, Math.PI);
+            const smileMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const smile = new THREE.Mesh(smileGeometry, smileMaterial);
+            smile.position.set(0, -radius * 0.2, radius * 0.7);
+            smile.rotation.x = Math.PI / 2;
+            smile.rotation.y = Math.PI;
+            rotatingObject.add(smile);
+            
+            rotatingObjectGroup.add(rotatingObject);
+        }
+
+        // Create string/rod connecting to central pivot
+        let string;
+        function createString(radius) {
+            if (string) rotatingObjectGroup.remove(string);
+            
+            const stringGeometry = new THREE.CylinderGeometry(0.05, 0.05, radius, 8);
+            const stringMaterial = new THREE.MeshStandardMaterial({ 
+                color: params.stringType === 'rod' ? 0x8B4513 : 0xDDDDDD,
+                roughness: params.stringType === 'rod' ? 0.7 : 0.3,
+                metalness: params.stringType === 'rod' ? 0.3 : 0.0
+            });
+            string = new THREE.Mesh(stringGeometry, stringMaterial);
+            
+            // Rotate and position the cylinder
+            string.rotation.z = Math.PI / 2;
+            string.position.x = radius / 2;
+            
+            rotatingObjectGroup.add(string);
+        }
+
+        // Force vectors
+        let velocityArrow, accelerationArrow, forceArrow;
+        function createVectors() {
+            // Create arrow helper for velocity (tangential)
+            const velocityDir = new THREE.Vector3(0, 0, 1);
+            velocityDir.normalize();
+            velocityArrow = new THREE.ArrowHelper(
+                velocityDir, 
+                new THREE.Vector3(params.radius, 0, 0), 
+                2, 
+                0x00ff00, 
+                0.3, 
+                0.2
+            );
+            velocityArrow.visible = params.showVectors;
+            rotatingObjectGroup.add(velocityArrow);
+            
+            // Create arrow helper for acceleration (centripetal)
+            const accelerationDir = new THREE.Vector3(-1, 0, 0);
+            accelerationDir.normalize();
+            accelerationArrow = new THREE.ArrowHelper(
+                accelerationDir, 
+                new THREE.Vector3(params.radius, 0, 0), 
+                2, 
+                0xff0000, 
+                0.3, 
+                0.2
+            );
+            accelerationArrow.visible = params.showVectors;
+            rotatingObjectGroup.add(accelerationArrow);
+            
+            // Create arrow helper for force (centripetal)
+            const forceDir = new THREE.Vector3(-1, 0, 0);
+            forceDir.normalize();
+            forceArrow = new THREE.ArrowHelper(
+                forceDir, 
+                new THREE.Vector3(params.radius, 0, 0), 
+                2, 
+                0x0000ff, 
+                0.3, 
+                0.2
+            );
+            forceArrow.visible = params.showVectors;
+            rotatingObjectGroup.add(forceArrow);
+        }
+
+        // Create group for rotating object and string
+        const rotatingObjectGroup = new THREE.Group();
+        scene.add(rotatingObjectGroup);
+        
+        // Add rotation to camera
+        function addOrbitControls() {
+            const OrbitControls = function(object, domElement) {
+                this.object = object;
+                this.domElement = domElement;
+                
+                // Rotation properties
+                this.rotateSpeed = 1.0;
+                this.zoomSpeed = 1.2;
+                
+                // Internal state
+                const scope = this;
+                const STATE = { NONE: -1, ROTATE: 0, ZOOM: 1 };
+                let state = STATE.NONE;
+                
+                // Initial position
+                const position0 = new THREE.Vector3();
+                position0.copy(object.position);
+                
+                // Events
+                const onMouseDown = function(event) {
+                    event.preventDefault();
+                    
+                    if (event.button === 0) {
+                        state = STATE.ROTATE;
+                    }
+                    
+                    document.addEventListener('mousemove', onMouseMove, false);
+                    document.addEventListener('mouseup', onMouseUp, false);
+                };
+                
+                const onMouseMove = function(event) {
+                    event.preventDefault();
+                    
+                    if (state === STATE.ROTATE) {
+                        const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                        const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+                        
+                        const rotSpeed = 0.002 * scope.rotateSpeed;
+                        
+                        // Rotate around Y axis (horizontal movement)
+                        scope.object.position.x = position0.x * Math.cos(movementX * rotSpeed) - position0.z * Math.sin(movementX * rotSpeed);
+                        scope.object.position.z = position0.z * Math.cos(movementX * rotSpeed) + position0.x * Math.sin(movementX * rotSpeed);
+                        
+                        // Rotate around X axis (vertical movement)
+                        const elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, movementY * rotSpeed));
+                        scope.object.position.y = position0.y - elevation * 5;
+                        
+                        scope.object.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                };
+                
+                const onMouseUp = function() {
+                    document.removeEventListener('mousemove', onMouseMove, false);
+                    document.removeEventListener('mouseup', onMouseUp, false);
+                    state = STATE.NONE;
+                    
+                    // Update position0
+                    position0.copy(scope.object.position);
+                };
+                
+                const onMouseWheel = function(event) {
+                    event.preventDefault();
+                    
+                    let delta = 0;
+                    
+                    if (event.wheelDelta) {
+                        // WebKit / Opera / Explorer 9
+                        delta = event.wheelDelta;
+                    } else if (event.detail) {
+                        // Firefox
+                        delta = -event.detail;
+                    }
+                    
+                    const zoomFactor = 0.1 * scope.zoomSpeed;
+                    
+                    if (delta > 0) {
+                        // Zoom in
+                        scope.object.position.multiplyScalar(1 - zoomFactor);
+                    } else {
+                        // Zoom out
+                        scope.object.position.multiplyScalar(1 + zoomFactor);
+                    }
+                    
+                    position0.copy(scope.object.position);
+                };
+                
+                // Event listeners
+                this.domElement.addEventListener('mousedown', onMouseDown, false);
+                this.domElement.addEventListener('wheel', onMouseWheel, false);
+                this.domElement.addEventListener('DOMMouseScroll', onMouseWheel, false); // Firefox
+                
+                this.update = function() {
+                    scope.object.lookAt(new THREE.Vector3(0, 0, 0));
+                };
+            };
+            
+            controls = new OrbitControls(camera, renderer.domElement);
+        }
+        
+        addOrbitControls();
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Parameters for circular motion
+        const params = {
+            radius: 5,
+            angularVelocity: 1.0,  // rad/s
+            mass: 1.0,  // kg
+            stringType: 'rod',  // rod or string
+            showVectors: true,
+            showTrail: true,
+            g: 9.81,  // m/s²
+            motion: 'uniform'  // uniform or accelerated
+        };
+
+        // Trail effect
+        const trailPoints = [];
+        const trailGeometry = new THREE.BufferGeometry();
+        const trailMaterial = new THREE.LineBasicMaterial({ color: 0xff9800, linewidth: 2 });
+        const trail = new THREE.Line(trailGeometry, trailMaterial);
+        scene.add(trail);
+
+        // Initialize everything
+        function initializeScene() {
+            createOrbitPath(params.radius);
+            createRotatingObject(params.mass);
+            createString(params.radius);
+            createVectors();
+            
+            // Position the object
+            rotatingObject.position.set(params.radius, 0, 0);
+            
+            // Reset trail
+            trailPoints.length = 0;
+            updateTrail();
+        }
+
+        // GUI
+        const gui = new dat.GUI({ width: 300 });
+        gui.add(params, 'radius', 1, 10).name('Radius (m)').onChange(function(value) {
+            createOrbitPath(value);
+            createString(value);
+            rotatingObject.position.set(value, 0, 0);
+            trailPoints.length = 0; // Reset trail
+        });
+        
+        gui.add(params, 'angularVelocity', 0.1, 3).name('Angular Velocity (rad/s)');
+        gui.add(params, 'mass', 0.1, 5).name('Mass (kg)').onChange(function(value) {
+            createRotatingObject(value);
+            rotatingObject.position.set(params.radius, 0, 0);
+        });
+        
+        gui.add(params, 'stringType', ['string', 'rod']).name('Connection Type').onChange(function() {
+            createString(params.radius);
+        });
+        
+        gui.add(params, 'showVectors').name('Show Force Vectors').onChange(function(value) {
+            velocityArrow.visible = value;
+            accelerationArrow.visible = value;
+            forceArrow.visible = value;
+        });
+        
+        gui.add(params, 'showTrail').name('Show Trail');
+        gui.add(params, 'motion', ['uniform', 'accelerated']).name('Motion Type');
+
+        // Variables for animation and physics
+        let clock = new THREE.Clock();
+        let angle = 0;
+        let angularAcceleration = 0;
+
+        // Function to update trail points
+        function updateTrail() {
+            if (trailPoints.length > 100) {
+                trailPoints.shift(); // Remove the oldest point
+            }
+            
+            const position = rotatingObjectGroup.position.clone();
+            position.add(new THREE.Vector3(params.radius, 0, 0).applyQuaternion(rotatingObjectGroup.quaternion));
+            trailPoints.push(position);
+            
+            // Update trail geometry
+            const positions = new Float32Array(trailPoints.length * 3);
+            for (let i = 0; i < trailPoints.length; i++) {
+                positions[i * 3] = trailPoints[i].x;
+                positions[i * 3 + 1] = trailPoints[i].y;
+                positions[i * 3 + 2] = trailPoints[i].z;
+            }
+            
+            trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            trail.visible = params.showTrail;
+        }
+
+        // Function to update physics values display
+        function updatePhysicsDisplay() {
+            // Calculate physical quantities
+            const velocity = params.radius * params.angularVelocity;
+            const acceleration = params.radius * Math.pow(params.angularVelocity, 2);
+            const force = params.mass * acceleration;
+            const period = 2 * Math.PI / params.angularVelocity;
+            
+            // Update the display
+            document.getElementById('period').textContent = period.toFixed(2);
+            document.getElementById('velocity').textContent = velocity.toFixed(2);
+            document.getElementById('acceleration').textContent = acceleration.toFixed(2);
+            document.getElementById('force').textContent = force.toFixed(2);
+            
+            // Update vector arrows
+            if (velocityArrow && accelerationArrow && forceArrow) {
+                velocityArrow.setLength(velocity * 0.3);
+                accelerationArrow.setLength(acceleration * 0.3);
+                forceArrow.setLength(force * 0.3);
+            }
+        }
+
+        // Animation loop
+        function animate() {
+    requestAnimationFrame(animate);
+    
+    const delta = clock.getDelta();
+    const time = clock.getElapsedTime();
+    
+    // Update object rotation based on motion type
+    if (params.motion === 'uniform') {
+        angle += params.angularVelocity * delta;
+    } else if (params.motion === 'accelerated') {
+        // In accelerated motion, we slowly increase angular velocity
+        angularAcceleration = 0.1;
+        params.angularVelocity += angularAcceleration * delta;
+        params.angularVelocity = Math.min(params.angularVelocity, 3); // Limit max velocity
+        angle += params.angularVelocity * delta;
+        
+        // Update GUI slider
+        for (let i = 0; i < gui.__controllers.length; i++) {
+            if (gui.__controllers[i].property === 'angularVelocity') {
+                gui.__controllers[i].updateDisplay();
+                break;
+            }
+        }
+    }
+    
+    // Apply rotation
+    rotatingObjectGroup.rotation.y = -angle;
+    rotatingObject.scale.set(2, 2, 2);
+    
+    // Update trail if needed
+    if (params.showTrail && clock.elapsedTime % 0.1 < delta) {
+        updateTrail();
+    }
+    
+    // Update physics display
+    updatePhysicsDisplay();
+    
+    // Update eyes to follow motion
+    if (rotatingObject) {
+        rotatingObject.children.forEach(eye => {
+            if (eye instanceof THREE.Mesh && eye.children.length > 0) {
+                // Make pupils follow the rotation for a dizzy effect
+                const pupil = eye.children[0];
+                const eyeAngle = -angle * 2;
+                const pupilRadius = 0.1;
+                pupil.position.x = Math.sin(eyeAngle) * pupilRadius;
+                pupil.position.y = Math.cos(eyeAngle) * pupilRadius;
+            }
+        });
+    }
+    
+    // Animate amusement park elements
+    parkAnimations.animateFerrisWheel(time);
+    parkAnimations.animateCoaster(time);
+    parkAnimations.animateCarousel(time);
+    parkAnimations.animateBalloons(time);
+    
+    renderer.render(scene, camera);
+}
+
+        // Initialize and start animation
+        initializeScene();
+        animate();
+    </script>
+</body>
+</html>

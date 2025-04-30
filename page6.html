@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projectile Motion Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+        }
+        canvas {
+            display: block;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 250px;
+            border: 3px solid #FF9800;
+        }
+        .info-panel h2 {
+            margin-top: 0;
+            color: #FF5722;
+            font-size: 20px;
+            text-align: center;
+        }
+        .info-panel p {
+            margin: 8px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        .equation {
+            font-style: italic;
+            font-weight: bold;
+            color: #0277BD;
+        }
+        .controls-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid #4CAF50;
+            font-size: 14px;
+            color: #333;
+        }
+        .fire-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        .fire-button:hover {
+            background-color: #E64A19;
+            transform: scale(1.1);
+        }
+        .fire-button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <h2>Projectile Motion</h2>
+        <p><span class="equation">x = v₀·cos(θ)·t</span> - Horizontal position</p>
+        <p><span class="equation">y = v₀·sin(θ)·t - ½gt²</span> - Vertical position</p>
+        <p><span class="equation">R = v₀²·sin(2θ)/g</span> - Range</p>
+        <p><span class="equation">H = v₀²·sin²(θ)/(2g)</span> - Max height</p>
+        <div id="live-data">
+            <p>Time: <span id="time">0</span> s</p>
+            <p>Position: (<span id="x-pos">0</span>, <span id="y-pos">0</span>) m</p>
+            <p>Velocity: <span id="velocity">0</span> m/s</p>
+            <p>Range: <span id="range">0</span> m</p>
+            <p>Max Height: <span id="max-height">0</span> m</p>
+        </div>
+    </div>
+    <div class="controls-info">
+        Click and drag to rotate the view. Scroll to zoom in/out.
+    </div>
+    <button class="fire-button" id="fire-button">FIRE!</button>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xE0F7FA);
+        
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 22, 38);
+        camera.rotation.x = -Math.PI / 10;
+        
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 20, 7);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 100;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        scene.add(directionalLight);
+
+        // Grid helper for scale reference
+        const gridHelper = new THREE.GridHelper(100, 20, 0x888888, 0xCCCCCC);
+        scene.add(gridHelper);
+        
+        // Create a plane as the ground
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x7cfc00, // Light green
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+
+        //Trees
+        function createTrees() {
+        const treeGroup = new THREE.Group();
+        
+        // Create multiple trees
+        for (let i = 0; i < 30; i++) {
+            const treeHeight = 2 + Math.random() * 3;
+            const tree = new THREE.Group();
+            
+            // Create the trunk
+            const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, treeHeight, 8);
+            const trunkMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,
+                roughness: 0.9
+            });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = treeHeight / 2;
+            trunk.castShadow = true;
+            tree.add(trunk);
+            
+            // Create tree foliage (different tree types)
+            if (Math.random() > 0.5) {
+                // Cone shaped evergreen tree
+                const foliageHeight = treeHeight * 1.5;
+                const foliageGeometry = new THREE.ConeGeometry(treeHeight/2, foliageHeight, 8);
+                const foliageMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x2E8B57,
+                    roughness: 0.8
+                });
+                const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                foliage.position.y = treeHeight + foliageHeight/2 - 0.5;
+                foliage.castShadow = true;
+                tree.add(foliage);
+            } else {
+                // Round deciduous tree
+                const foliageRadius = treeHeight/2 + 0.5;
+                const foliageGeometry = new THREE.SphereGeometry(foliageRadius, 8, 8);
+                const foliageMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x6B8E23,
+                    roughness: 0.8
+                });
+                const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                foliage.position.y = treeHeight + foliageRadius - 0.3;
+                foliage.castShadow = true;
+                tree.add(foliage);
+            }
+            
+            // Position trees randomly on the ground, avoiding the center area (for launcher)
+            let x, z;
+            do {
+                x = Math.random() * 90 - 45;
+                z = Math.random() * 90 - 45;
+            } while (Math.sqrt(x*x + z*z) < 15); // Keep trees away from the center
+            
+            tree.position.set(x, 0, z);
+            treeGroup.add(tree);
+        }
+        
+        scene.add(treeGroup);
+    }
+
+    createTrees();
+
+    //Trees End
+
+
+        // Castle Beg
+
+        function createForts() {
+        // Fort 1 - Medieval castle style
+        const fort1 = new THREE.Group();
+        
+        // Main castle structure
+        const castleBaseGeometry = new THREE.BoxGeometry(10, 4, 10);
+        const castleMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x808080,
+            roughness: 0.9
+        });
+        const castleBase = new THREE.Mesh(castleBaseGeometry, castleMaterial);
+        castleBase.position.y = 2;
+        castleBase.castShadow = true;
+        castleBase.receiveShadow = true;
+        fort1.add(castleBase);
+        
+        // Corner towers
+        const towerPositions = [
+            [-4.5, 0, -4.5],
+            [-4.5, 0, 4.5],
+            [4.5, 0, -4.5],
+            [4.5, 0, 4.5]
+        ];
+        
+        towerPositions.forEach(pos => {
+            const towerGeometry = new THREE.CylinderGeometry(1.2, 1.5, 7, 8);
+            const tower = new THREE.Mesh(towerGeometry, castleMaterial);
+            tower.position.set(pos[0], pos[1] + 3.5, pos[2]);
+            tower.castShadow = true;
+            fort1.add(tower);
+            
+            // Tower roof
+            const roofGeometry = new THREE.ConeGeometry(1.3, 2, 8);
+            const roofMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xA52A2A,
+                roughness: 0.7
+            });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 4.5;
+            tower.add(roof);
+        });
+        
+        // Castle gate
+        const gateGeometry = new THREE.BoxGeometry(3, 3, 1);
+        const gateMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x8B4513, 
+            roughness: 0.8
+        });
+        const gate = new THREE.Mesh(gateGeometry, gateMaterial);
+        gate.position.set(0, 1.5, 5);
+        fort1.add(gate);
+        
+        // Battlements on top
+        for (let i = -4; i <= 4; i += 1) {
+            for (let j of [-4.5, 4.5]) {
+                if (i !== 0 || j !== 4.5) { // Skip where the gate is
+                    const merlon = new THREE.BoxGeometry(0.7, 1, 0.7);
+                    const merlonMesh = new THREE.Mesh(merlon, castleMaterial);
+                    merlonMesh.position.set(i, 4.5, j);
+                    fort1.add(merlonMesh);
+                }
+            }
+        }
+        
+        for (let i of [-4.5, 4.5]) {
+            for (let j = -3.5; j <= 3.5; j += 1) {
+                const merlon = new THREE.BoxGeometry(0.7, 1, 0.7);
+                const merlonMesh = new THREE.Mesh(merlon, castleMaterial);
+                merlonMesh.position.set(i, 4.5, j);
+                fort1.add(merlonMesh);
+            }
+        }
+        
+        // Position fort 1
+        fort1.position.set(-30, 0, -20);
+        fort1.rotation.y = Math.PI / 6; // Slight rotation
+        scene.add(fort1);
+        
+        // Fort 2 - Modern style bunker/fort
+        const fort2 = new THREE.Group();
+        
+        // Main bunker structure
+        const bunkerGeometry = new THREE.BoxGeometry(12, 3, 8);
+        const bunkerMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x5D6D7E,
+            roughness: 0.85,
+            metalness: 0.2
+        });
+        const bunker = new THREE.Mesh(bunkerGeometry, bunkerMaterial);
+        bunker.position.y = 1.5;
+        bunker.castShadow = true;
+        bunker.receiveShadow = true;
+        fort2.add(bunker);
+        
+        // Bunker dome
+        const domeGeometry = new THREE.SphereGeometry(3, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+        const domeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x5D6D7E,
+            roughness: 0.7,
+            metalness: 0.3
+        });
+        const dome = new THREE.Mesh(domeGeometry, domeMaterial);
+        dome.position.set(0, 3, 0);
+        dome.scale.set(1.2, 1, 1.2);
+        bunker.add(dome);
+        
+        // Add antenna tower
+        const antennaBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 5, 8);
+        const antennaMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x7F8C8D,
+            metalness: 0.5
+        });
+        const antennaBase = new THREE.Mesh(antennaBaseGeometry, antennaMaterial);
+        antennaBase.position.set(3, 3, 2);
+        fort2.add(antennaBase);
+        
+        const antennaTopGeometry = new THREE.ConeGeometry(0.1, 1, 8);
+        const antennaTop = new THREE.Mesh(antennaTopGeometry, antennaMaterial);
+        antennaTop.position.y = 3;
+        antennaBase.add(antennaTop);
+        
+        // Add sandbag barriers
+        const sandbagMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xbcaaa4,
+            roughness: 1.0
+        });
+        
+        for (let i = -6; i <= 6; i += 1.5) {
+            if (i > -2 && i < 2) continue; // Leave gap for entrance
+            
+            const sandbagGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8);
+            sandbagGeometry.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+            
+            const sandbag = new THREE.Mesh(sandbagGeometry, sandbagMaterial);
+            sandbag.position.set(i, 0.4, 5);
+            sandbag.castShadow = true;
+            fort2.add(sandbag);
+            
+            // Stack a second layer on some sandbags
+            if (Math.random() > 0.5) {
+                const sandbag2 = new THREE.Mesh(sandbagGeometry, sandbagMaterial);
+                sandbag2.position.set(0, 0.8, 0);
+                sandbag2.rotation.z = Math.PI / 2; // Rotate for better stacking
+                sandbag.add(sandbag2);
+            }
+        }
+        
+        // Add radar dish on the dome
+        const radarBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+        const radarBase = new THREE.Mesh(radarBaseGeometry, antennaMaterial);
+        radarBase.position.set(0, 3, 0);
+        dome.add(radarBase);
+        
+        const radarDishGeometry = new THREE.SphereGeometry(1, 16, 16, 0, Math.PI);
+        const radarDish = new THREE.Mesh(radarDishGeometry, antennaMaterial);
+        radarDish.rotation.x = Math.PI / 2;
+        radarDish.position.y = 1;
+        radarDish.scale.set(1, 0.3, 1);
+        radarBase.add(radarDish);
+        
+        // Position fort 2
+        fort2.position.set(35, 0, 15);
+        fort2.rotation.y = -Math.PI / 4; // Different rotation than fort 1
+        scene.add(fort2);
+    }
+
+    createForts();
+        // Castle End
+
+        // Create cannon/launcher
+        const launcherGroup = new THREE.Group();
+        scene.add(launcherGroup);
+
+        launcherGroup.scale.set(1.5, 1.5, 1.5);
+        
+        // Base of launcher
+        const baseGeometry = new THREE.CylinderGeometry(2, 2.5, 1, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        base.position.y = 0.5;
+        base.castShadow = true;
+        base.receiveShadow = true;
+        launcherGroup.add(base);
+        
+        // Rotatable part of launcher
+        const pivotGroup = new THREE.Group();
+        base.add(pivotGroup);
+        pivotGroup.position.y = 0.5;
+        
+        // Tube of launcher
+        const tubeGeometry = new THREE.CylinderGeometry(0.8, 1, 4, 32);
+        const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x696969 });
+        const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+        tube.rotation.x = Math.PI / 2;
+        tube.position.z = 2;
+        tube.castShadow = true;
+        tube.receiveShadow = true;
+        pivotGroup.add(tube);
+        
+        // Decorative elements
+        const wheelGeometry = new THREE.TorusGeometry(1.5, 0.3, 16, 32);
+        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.x = Math.PI / 2;
+        wheel.position.y = -0.3;
+        wheel.castShadow = true;
+        wheel.receiveShadow = true;
+        base.add(wheel);
+
+        // Create projectile
+        let projectile;
+        function createProjectile(mass) {
+            if (projectile) scene.remove(projectile);
+            
+            // Create sphere with face
+            const radius = Math.pow(mass, 1/3) * 0.5 * 2;  // Scale radius based on mass
+            const sphereGeometry = new THREE.SphereGeometry(radius, 32, 32);
+            const sphereMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xff9800,
+                roughness: 0.5,
+                metalness: 0.3
+            });
+            projectile = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            projectile.castShadow = true;
+            projectile.receiveShadow = true;
+            
+            // Add googly eyes
+            const eyeGeometry = new THREE.SphereGeometry(radius * 0.3, 32, 32);
+            const eyeWhiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const eyeBlackMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+            
+            // Left eye
+            const leftEyeWhite = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+            leftEyeWhite.position.set(radius * 0.5, radius * 0.4, radius * 0.7);
+            leftEyeWhite.scale.set(1, 1, 0.5);
+            projectile.add(leftEyeWhite);
+            
+            const leftEyePupil = new THREE.Mesh(
+                new THREE.SphereGeometry(radius * 0.15, 32, 32),
+                eyeBlackMaterial
+            );
+            leftEyePupil.position.set(0, 0, radius * 0.3);
+            leftEyeWhite.add(leftEyePupil);
+            
+            // Right eye
+            const rightEyeWhite = new THREE.Mesh(eyeGeometry, eyeWhiteMaterial);
+            rightEyeWhite.position.set(-radius * 0.5, radius * 0.4, radius * 0.7);
+            rightEyeWhite.scale.set(1, 1, 0.5);
+            projectile.add(rightEyeWhite);
+            
+            const rightEyePupil = new THREE.Mesh(
+                new THREE.SphereGeometry(radius * 0.15, 32, 32),
+                eyeBlackMaterial
+            );
+            rightEyePupil.position.set(0, 0, radius * 0.3);
+            rightEyeWhite.add(rightEyePupil);
+            
+            // Add smile
+            const smileGeometry = new THREE.TorusGeometry(radius * 0.4, radius * 0.07, 16, 32, Math.PI);
+            const smileMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const smile = new THREE.Mesh(smileGeometry, smileMaterial);
+            smile.position.set(0, -radius * 0.2, radius * 0.7);
+            smile.rotation.x = Math.PI / 2;
+            smile.rotation.y = Math.PI;
+            projectile.add(smile);
+            
+            // Position at launcher tube end
+            resetProjectile();
+            
+            scene.add(projectile);
+        }
+        
+        function resetProjectile() {
+            if (!projectile) return;
+            
+            // Position projectile at end of launcher tube
+            const tubeEndPosition = new THREE.Vector3(0, 0, 8);
+            tubeEndPosition.applyQuaternion(pivotGroup.quaternion);
+            tubeEndPosition.add(pivotGroup.position);
+            tubeEndPosition.add(base.position);
+            
+            projectile.position.copy(tubeEndPosition);
+            projectile.rotation.set(0, 0, 0);
+            
+            // Reset projectile physics
+            projectileVelocity.set(0, 0, 0);
+            isLaunched = false;
+            elapsedTime = 0;
+            trailPoints = [];
+            updateTrail();
+        }
+
+        // Create trajectory prediction line
+        const trajLineMaterial = new THREE.LineDashedMaterial({
+            color: 0xff0000,
+            dashSize: 0.5,
+            gapSize: 0.3
+        });
+        let trajectoryLine;
+        
+        function updateTrajectoryLine() {
+            // Remove old line if exists
+            if (trajectoryLine) scene.remove(trajectoryLine);
+            
+            // Calculate trajectory points
+            const points = [];
+            const v0 = params.initialVelocity;
+            const angle = params.launchAngle * Math.PI / 180;
+            const vx = v0 * Math.cos(angle);
+            const vy = v0 * Math.sin(angle);
+            const g = params.gravity;
+            
+            // Get starting position
+            const startPos = getProjectileStartPosition();
+            
+            for (let t = 0; t <= 10; t += 0.1) {
+                const x = startPos.x + vx * t;
+                const y = startPos.y + vy * t - 0.5 * g * t * t;
+                
+                // Stop if we hit the ground
+                if (y < 0) break;
+                
+                points.push(new THREE.Vector3(x, y, startPos.z));
+            }
+            
+            // Create geometry and line
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            trajectoryLine = new THREE.Line(geometry, trajLineMaterial);
+            trajectoryLine.computeLineDistances(); // Required for dashed line
+            trajectoryLine.visible = params.showTrajectory;
+            scene.add(trajectoryLine);
+        }
+
+        // Velocity and force vectors
+        let velocityArrow, accelerationArrow;
+        
+        function createVectors() {
+            // Remove old arrows if they exist
+            if (velocityArrow) scene.remove(velocityArrow);
+            if (accelerationArrow) scene.remove(accelerationArrow);
+            
+            // Create velocity arrow (for initial velocity)
+            const startPos = getProjectileStartPosition();
+            const angle = params.launchAngle * Math.PI / 180;
+            const velDir = new THREE.Vector3(
+                Math.cos(angle),
+                Math.sin(angle),
+                0
+            );
+            velDir.normalize();
+            
+            velocityArrow = new THREE.ArrowHelper(
+                velDir,
+                startPos,
+                params.initialVelocity * 0.3, // Scale length for visualization
+                0x00ff00, // Green
+                0.5, // Head length
+                0.3  // Head width
+            );
+            velocityArrow.visible = params.showVectors && !isLaunched;
+            scene.add(velocityArrow);
+            
+            // Create gravity/acceleration arrow
+            const accDir = new THREE.Vector3(0, -1, 0);
+            accelerationArrow = new THREE.ArrowHelper(
+                accDir,
+                startPos,
+                params.gravity * 0.3, // Scale for visualization
+                0xff0000, // Red
+                0.5,
+                0.3
+            );
+            accelerationArrow.visible = params.showVectors && !isLaunched;
+            scene.add(accelerationArrow);
+        }
+
+        // Function to get the start position of projectile
+        function getProjectileStartPosition() {
+            const tubeEndPosition = new THREE.Vector3(0, 0, 4);
+            tubeEndPosition.applyQuaternion(pivotGroup.quaternion);
+            tubeEndPosition.add(pivotGroup.position);
+            tubeEndPosition.add(base.position);
+            return tubeEndPosition;
+        }
+
+        // Trail effect
+        let trailPoints = [];
+        const trailGeometry = new THREE.BufferGeometry();
+        const trailMaterial = new THREE.LineBasicMaterial({ color: 0xff9800, linewidth: 2 });
+        const trail = new THREE.Line(trailGeometry, trailMaterial);
+        scene.add(trail);
+
+        function updateTrail() {
+            if (trailPoints.length > 500) {
+                trailPoints.shift(); // Remove the oldest point
+            }
+            
+            if (isLaunched && projectile) {
+                trailPoints.push(projectile.position.clone());
+            }
+            
+            // Update trail geometry
+            const positions = new Float32Array(trailPoints.length * 3);
+            for (let i = 0; i < trailPoints.length; i++) {
+                positions[i * 3] = trailPoints[i].x;
+                positions[i * 3 + 1] = trailPoints[i].y;
+                positions[i * 3 + 2] = trailPoints[i].z;
+            }
+            
+            trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            trail.visible = params.showTrail;
+        }
+
+        // Add rotation to camera
+        function addOrbitControls() {
+            const OrbitControls = function(object, domElement) {
+                this.object = object;
+                this.domElement = domElement;
+                
+                // Rotation properties
+                this.rotateSpeed = 1.0;
+                this.zoomSpeed = 1.2;
+                
+                // Internal state
+                const scope = this;
+                const STATE = { NONE: -1, ROTATE: 0, ZOOM: 1 };
+                let state = STATE.NONE;
+                
+                // Initial position
+                const position0 = new THREE.Vector3();
+                position0.copy(object.position);
+                
+                // Events
+                const onMouseDown = function(event) {
+                    event.preventDefault();
+                    
+                    if (event.button === 0) {
+                        state = STATE.ROTATE;
+                    }
+                    
+                    document.addEventListener('mousemove', onMouseMove, false);
+                    document.addEventListener('mouseup', onMouseUp, false);
+                };
+                
+                const onMouseMove = function(event) {
+                    event.preventDefault();
+                    
+                    if (state === STATE.ROTATE) {
+                        const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                        const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+                        
+                        const rotSpeed = 0.002 * scope.rotateSpeed;
+                        
+                        // Rotate around Y axis (horizontal movement)
+                        scope.object.position.x = position0.x * Math.cos(movementX * rotSpeed) - position0.z * Math.sin(movementX * rotSpeed);
+                        scope.object.position.z = position0.z * Math.cos(movementX * rotSpeed) + position0.x * Math.sin(movementX * rotSpeed);
+                        
+                        // Rotate around X axis (vertical movement)
+                        const elevation = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, movementY * rotSpeed));
+                        scope.object.position.y = position0.y - elevation * 5;
+                        
+                        scope.object.lookAt(new THREE.Vector3(0, 0, 0));
+                    }
+                };
+                
+                const onMouseUp = function() {
+                    document.removeEventListener('mousemove', onMouseMove, false);
+                    document.removeEventListener('mouseup', onMouseUp, false);
+                    state = STATE.NONE;
+                    
+                    // Update position0
+                    position0.copy(scope.object.position);
+                };
+                
+                const onMouseWheel = function(event) {
+                    event.preventDefault();
+                    
+                    let delta = 0;
+                    
+                    if (event.wheelDelta) {
+                        // WebKit / Opera / Explorer 9
+                        delta = event.wheelDelta;
+                    } else if (event.detail) {
+                        // Firefox
+                        delta = -event.detail;
+                    }
+                    
+                    const zoomFactor = 0.1 * scope.zoomSpeed;
+                    
+                    if (delta > 0) {
+                        // Zoom in
+                        scope.object.position.multiplyScalar(1 - zoomFactor);
+                    } else {
+                        // Zoom out
+                        scope.object.position.multiplyScalar(1 + zoomFactor);
+                    }
+                    
+                    position0.copy(scope.object.position);
+                };
+                
+                // Event listeners
+                this.domElement.addEventListener('mousedown', onMouseDown, false);
+                this.domElement.addEventListener('wheel', onMouseWheel, false);
+                this.domElement.addEventListener('DOMMouseScroll', onMouseWheel, false); // Firefox
+                
+                this.update = function() {
+                    scope.object.lookAt(new THREE.Vector3(0, 0, 0));
+                };
+            };
+            
+            controls = new OrbitControls(camera, renderer.domElement);
+        }
+        
+        addOrbitControls();
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Parameters for projectile motion
+        const params = {
+            initialVelocity: 20, // m/s
+            launchAngle: 45,    // degrees
+            mass: 1.0,          // kg
+            gravity: 9.81,      // m/s²
+            airResistance: 0,   // coefficient
+            showVectors: true,
+            showTrail: true,
+            showTrajectory: true
+        };
+
+        // Calculate theoretical maximum range and height
+        function calculateTheoreticalValues() {
+            const v0 = params.initialVelocity;
+            const angle = params.launchAngle * Math.PI / 180;
+            const g = params.gravity;
+            
+            // Theoretical maximum range
+            const range = (v0 * v0 * Math.sin(2 * angle)) / g;
+            
+            // Theoretical maximum height
+            const maxHeight = (v0 * v0 * Math.sin(angle) * Math.sin(angle)) / (2 * g);
+            
+            return { range, maxHeight };
+        }
+
+        // Function to update physics display
+        function updatePhysicsDisplay() {
+            if (!projectile || !isLaunched) {
+                // If not launched, show theoretical values
+                const theoretical = calculateTheoreticalValues();
+                document.getElementById('time').textContent = "0.00";
+                document.getElementById('x-pos').textContent = "0.00";
+                document.getElementById('y-pos').textContent = "0.00";
+                document.getElementById('velocity').textContent = params.initialVelocity.toFixed(2);
+                document.getElementById('range').textContent = theoretical.range.toFixed(2);
+                document.getElementById('max-height').textContent = theoretical.maxHeight.toFixed(2);
+                return;
+            }
+            
+            // Calculate current velocity
+            const v = projectileVelocity.length();
+            
+            // Display current values
+            document.getElementById('time').textContent = elapsedTime.toFixed(2);
+            document.getElementById('x-pos').textContent = projectile.position.x.toFixed(2);
+            document.getElementById('y-pos').textContent = projectile.position.y.toFixed(2);
+            document.getElementById('velocity').textContent = v.toFixed(2);
+            
+            // For range and max height, use theoretical calculations
+            const theoretical = calculateTheoreticalValues();
+            document.getElementById('range').textContent = theoretical.range.toFixed(2);
+            document.getElementById('max-height').textContent = theoretical.maxHeight.toFixed(2);
+            
+            // Update velocity vector if visible
+            if (velocityArrow && params.showVectors && isLaunched) {
+                const velDir = projectileVelocity.clone().normalize();
+                velocityArrow.position.copy(projectile.position);
+                velocityArrow.setDirection(velDir);
+                velocityArrow.setLength(projectileVelocity.length() * 0.3);
+            }
+            
+            // Update acceleration vector if visible
+            if (accelerationArrow && params.showVectors && isLaunched) {
+                accelerationArrow.position.copy(projectile.position);
+            }
+        }
+
+        // GUI
+        const gui = new dat.GUI({ width: 300 });
+        gui.add(params, 'initialVelocity', 1, 50).name('Initial Velocity (m/s)').onChange(updateTrajectoryLine);
+        gui.add(params, 'launchAngle', 0, 90).name('Launch Angle (°)').onChange(function(value) {
+            // Update launcher angle
+            pivotGroup.rotation.x = -(value * Math.PI / 180);
+            updateTrajectoryLine();
+        });
+        
+        gui.add(params, 'mass', 0.1, 5).name('Mass (kg)').onChange(function(value) {
+            createProjectile(value);
+        });
+        
+        gui.add(params, 'gravity', 0.1, 20).name('Gravity (m/s²)').onChange(updateTrajectoryLine);
+        gui.add(params, 'airResistance', 0, 0.5).name('Air Resistance');
+        
+        const displayFolder = gui.addFolder('Display Options');
+        displayFolder.add(params, 'showVectors').name('Show Vectors').onChange(function(value) {
+            if (velocityArrow) velocityArrow.visible = value && (!isLaunched || params.showVectors);
+            if (accelerationArrow) accelerationArrow.visible = value && (!isLaunched || params.showVectors);
+        });
+        
+        displayFolder.add(params, 'showTrail').name('Show Trail').onChange(function(value) {
+            trail.visible = value;
+        });
+        
+        displayFolder.add(params, 'showTrajectory').name('Show Trajectory').onChange(function(value) {
+            if (trajectoryLine) trajectoryLine.visible = value;
+        });
+
+        // Fire button
+        document.getElementById('fire-button').addEventListener('click', fireProjectile);
+
+        // Variables for projectile physics
+        let isLaunched = false;
+        let elapsedTime = 0;
+        const projectileVelocity = new THREE.Vector3();
+
+        function fireProjectile() {
+            if (isLaunched || !projectile) return;
+            
+            isLaunched = true;
+            elapsedTime = 0;
+            
+            // Set initial velocity
+            const v0 = params.initialVelocity;
+            const angle = params.launchAngle * Math.PI / 180;
+            
+            projectileVelocity.set(
+                v0 * Math.cos(angle),
+                v0 * Math.sin(angle),
+                0
+            );
+            
+            // Clear trail
+            trailPoints = [];
+            
+            // Play animation for button
+            const button = document.getElementById('fire-button');
+            button.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1)';
+            }, 100);
+            
+            // Show real vectors
+            if (velocityArrow) velocityArrow.visible = params.showVectors;
+            if (accelerationArrow) accelerationArrow.visible = params.showVectors;
+            
+            // Hide trajectory prediction
+            if (trajectoryLine) trajectoryLine.visible = false;
+            
+            // Add bounce effect to projectile
+            projectile.scale.set(1.2, 1.2, 1.2);
+            setTimeout(() => {
+                projectile.scale.set(1, 1, 1);
+            }, 100);
+        }
+
+        // Animation loop
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            // Update launcher if angle changed
+            pivotGroup.rotation.x = -(params.launchAngle * Math.PI / 180);
+            
+            // Update trajectory line if not launched
+            if (!isLaunched) {
+                updateTrajectoryLine();
+                resetProjectile();
+            }
+            
+            // Update projectile physics if launched
+            if (isLaunched && projectile) {
+                elapsedTime += delta;
+                
+                // Apply gravity
+                projectileVelocity.y -= params.gravity * delta;
+                
+                // Apply air resistance if enabled
+                if (params.airResistance > 0) {
+                    const resistance = params.airResistance * projectileVelocity.length() * projectileVelocity.length();
+                    const resistanceDir = projectileVelocity.clone().normalize().negate();
+                    const resistanceVec = resistanceDir.multiplyScalar(resistance * delta / params.mass);
+                    
+                    // Ensure resistance doesn't exceed velocity
+                    if (resistanceVec.length() > projectileVelocity.length()) {
+                        projectileVelocity.set(0, 0, 0);
+                    } else {
+                        projectileVelocity.add(resistanceVec);
+                    }
+                }
+                
+                // Update position
+                projectile.position.x += projectileVelocity.x * delta;
+                projectile.position.y += projectileVelocity.y * delta;
+                projectile.position.z += projectileVelocity.z * delta;
+                
+                // Check for ground collision
+                if (projectile.position.y < projectile.geometry.parameters.radius) {
+                    // Reset for next launch
+                    resetProjectile();
+                }
+                
+                // Add some rotation for visual effect
+                projectile.rotation.x += projectileVelocity.length() * 0.02;
+                projectile.rotation.z += projectileVelocity.length() * 0.015;
+                
+                // Update trail
+                if (params.showTrail && clock.elapsedTime % 0.05 < delta) {
+                    updateTrail();
+                }
+                
+                // Make eyes spin when projectile is in motion
+                projectile.children.forEach(eye => {
+                    if (eye instanceof THREE.Mesh && eye.children.length > 0) {
+                        // Make pupils spin for dizzy effect
+                        const pupil = eye.children[0];
+                        const eyeAngle = elapsedTime * 5;
+                        const pupilRadius = 0.1;
+                        pupil.position.x = Math.sin(eyeAngle) * pupilRadius;
+                        pupil.position.y = Math.cos(eyeAngle) * pupilRadius;
+                    }
+                });
+                
+                // Update vectors
+                updateVectors();
+            }
+            
+            // Update physics display
+            updatePhysicsDisplay();
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Update vector arrows during flight
+        function updateVectors() {
+            if (velocityArrow && params.showVectors) {
+                const velDir = projectileVelocity.clone().normalize();
+                velocityArrow.position.copy(projectile.position);
+                velocityArrow.setDirection(velDir);
+                velocityArrow.setLength(projectileVelocity.length() * 0.3);
+            }
+            
+            if (accelerationArrow && params.showVectors) {
+                accelerationArrow.position.copy(projectile.position);
+            }
+        }
+
+        // ─── Simple Cloud Clusters ───────────────────────────────────
+        // group to hold all cloud‐spheres
+        const cloudGroup = new THREE.Group();
+
+        const cloudClusters = 20;
+        for (let i = 0; i < cloudClusters; i++) {
+        // each cluster has 5–10 spheres
+        const clusterCenter = new THREE.Vector3(
+            (Math.random() - 0.5) * 300,   // spread X
+            30 + Math.random() * 15,       // sky height
+            (Math.random() - 0.5) * 300    // spread Z
+        );
+        const pieces = 5 + Math.floor(Math.random() * 6);
+        for (let j = 0; j < pieces; j++) {
+            const r = 2 + Math.random() * 3; // sphere radius
+            const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(r, 12, 12),
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8,
+                roughness: 1,
+                metalness: 0,
+            })
+            );
+            sphere.position.set(
+            clusterCenter.x + (Math.random() - 0.5) * 10,
+            clusterCenter.y + (Math.random() - 0.5) * 5,
+            clusterCenter.z + (Math.random() - 0.5) * 10
+            );
+            sphere.castShadow = false;
+            sphere.receiveShadow = false;
+            cloudGroup.add(sphere);
+        }
+        }
+        scene.add(cloudGroup);
+
+        // Initialize and start animation
+        createProjectile(params.mass);
+        updateTrajectoryLine();
+        createVectors();
+        animate();
+    </script>
+</body>
+</html>
