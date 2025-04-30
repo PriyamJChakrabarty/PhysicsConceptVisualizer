@@ -392,161 +392,39 @@
 
         launcherGroup.scale.set(1.5, 1.5, 1.5);
         
-        // Create castle tower base (instead of simple cylinder)
-const towerHeight = 6;
-const towerRadius = 2.5;
-
-// Main tower cylinder
-const towerGeometry = new THREE.CylinderGeometry(towerRadius, towerRadius * 1.2, towerHeight, 16);
-const towerMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x808080, // Stone gray color
-    roughness: 0.9
-});
-const tower = new THREE.Mesh(towerGeometry, towerMaterial);
-tower.position.y = towerHeight / 2;
-tower.castShadow = true;
-tower.receiveShadow = true;
-launcherGroup.add(tower);
-
-// Add stone texture to tower (alternating rows of stones)
-const stoneRows = 10;
-for (let i = 0; i < stoneRows; i++) {
-    const rowOffset = (i % 2) * 0.5; // Offset every other row
-    const stoneCount = 8;
-    
-    for (let j = 0; j < stoneCount; j++) {
-        const angle = (j / stoneCount) * Math.PI * 2 + rowOffset;
-        const stoneDepth = 0.15;
-        const stoneWidth = (Math.PI * 2 * towerRadius) / stoneCount * 0.8;
-        const stoneHeight = towerHeight / stoneRows * 0.8;
-        
-        const stoneGeometry = new THREE.BoxGeometry(stoneWidth, stoneHeight, stoneDepth);
-        const stoneMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x909090, // Slightly lighter gray
-            roughness: 1.0 
-        });
-        
-        const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
-        
-        // Position the stone on the tower surface
-        const yPos = -towerHeight/2 + (i + 0.5) * (towerHeight / stoneRows);
-        stone.position.set(
-            Math.sin(angle) * (towerRadius + stoneDepth/2),
-            yPos,
-            Math.cos(angle) * (towerRadius + stoneDepth/2)
-        );
-        
-        // Rotate to face outward
-        stone.lookAt(new THREE.Vector3(
-            Math.sin(angle) * (towerRadius + 1),
-            yPos,
-            Math.cos(angle) * (towerRadius + 1)
-        ));
-        
-        tower.add(stone);
-    }
-}
-
-// Add battlements on top of tower
-const battlementCount = 12;
-const battlementWidth = (Math.PI * 2 * towerRadius) / battlementCount * 0.5;
-const battlementHeight = 0.8;
-const battlementDepth = 0.3;
-
-for (let i = 0; i < battlementCount; i++) {
-    const angle = (i / battlementCount) * Math.PI * 2;
-    
-    const battlementGeometry = new THREE.BoxGeometry(battlementWidth, battlementHeight, battlementDepth);
-    const battlement = new THREE.Mesh(battlementGeometry, towerMaterial);
-    
-    // Position on top rim of tower
-    battlement.position.set(
-        Math.sin(angle) * (towerRadius),
-        towerHeight + battlementHeight/2,
-        Math.cos(angle) * (towerRadius)
-    );
-    
-    // Rotate to face outward
-    battlement.lookAt(new THREE.Vector3(
-        Math.sin(angle) * (towerRadius + 1),
-        towerHeight + battlementHeight/2,
-        Math.cos(angle) * (towerRadius + 1)
-    ));
-    
-    tower.add(battlement);
-}
-
-// Add a platform on top for the cannon
-const platformGeometry = new THREE.CylinderGeometry(towerRadius * 0.9, towerRadius, 0.5, 32);
-const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Wood color
-const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-platform.position.y = towerHeight + 0.25;
-platform.castShadow = true;
-platform.receiveShadow = true;
-tower.add(platform);
-
-// Create the rotatable part of launcher (cannon) on top of tower
-const pivotGroup = new THREE.Group();
-platform.add(pivotGroup);
-pivotGroup.position.y = 0.5;
-
-// Tube of launcher (cannon)
-const tubeGeometry = new THREE.CylinderGeometry(0.8, 1, 4, 32);
-const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x696969 });
-const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
-tube.rotation.x = Math.PI / 2;
-tube.position.z = 2;
-tube.castShadow = true;
-tube.receiveShadow = true;
-pivotGroup.add(tube);
-
-// Add decorative cannon wheel
-const wheelGeometry = new THREE.TorusGeometry(1.5, 0.3, 16, 32);
-const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
-const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-wheel.rotation.x = Math.PI / 2;
-wheel.position.y = -0.3;
-wheel.castShadow = true;
-wheel.receiveShadow = true;
-pivotGroup.add(wheel);
-
-// Add wooden supports for the cannon
-const supportGeometry = new THREE.BoxGeometry(3, 0.3, 0.3);
-const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-
-const supportLeft = new THREE.Mesh(supportGeometry, supportMaterial);
-supportLeft.position.set(-1, -0.3, 1);
-supportLeft.rotation.y = Math.PI / 4;
-pivotGroup.add(supportLeft);
-
-const supportRight = new THREE.Mesh(supportGeometry, supportMaterial);
-supportRight.position.set(1, -0.3, 1);
-supportRight.rotation.y = -Math.PI / 4;
-pivotGroup.add(supportRight);
-
-// Add a small flag on top of the tower
-const flagpoleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 8);
-const flagpoleMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-const flagpole = new THREE.Mesh(flagpoleGeometry, flagpoleMaterial);
-flagpole.position.set(0, 1, -towerRadius * 0.7);
-platform.add(flagpole);
-
-const flagGeometry = new THREE.PlaneGeometry(1, 0.6);
-const flagMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xcc0000, 
-    side: THREE.DoubleSide 
-});
-const flag = new THREE.Mesh(flagGeometry, flagMaterial);
-flag.position.set(0.5, 0.7, 0);
-flag.rotation.y = Math.PI / 2;
-flagpole.add(flag);
+        // Base of launcher
+        const baseGeometry = new THREE.CylinderGeometry(2, 2.5, 1, 32);
+        const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const base = new THREE.Mesh(baseGeometry, baseMaterial);
+        base.position.y = 0.5;
+        base.castShadow = true;
+        base.receiveShadow = true;
+        launcherGroup.add(base);
         
         // Rotatable part of launcher
         const pivotGroup = new THREE.Group();
         base.add(pivotGroup);
         pivotGroup.position.y = 0.5;
         
+        // Tube of launcher
+        const tubeGeometry = new THREE.CylinderGeometry(0.8, 1, 4, 32);
+        const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x696969 });
+        const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+        tube.rotation.x = Math.PI / 2;
+        tube.position.z = 2;
+        tube.castShadow = true;
+        tube.receiveShadow = true;
+        pivotGroup.add(tube);
         
+        // Decorative elements
+        const wheelGeometry = new THREE.TorusGeometry(1.5, 0.3, 16, 32);
+        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 });
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.x = Math.PI / 2;
+        wheel.position.y = -0.3;
+        wheel.castShadow = true;
+        wheel.receiveShadow = true;
+        base.add(wheel);
 
         // Create projectile
         let projectile;
