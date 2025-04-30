@@ -218,172 +218,287 @@
         // Castle Beg
 
         function createForts() {
-        // Fort 1 - Medieval castle style
-        const fort1 = new THREE.Group();
-        
-        // Main castle structure
-        const castleBaseGeometry = new THREE.BoxGeometry(10, 4, 10);
-        const castleMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x808080,
-            roughness: 0.9
-        });
-        const castleBase = new THREE.Mesh(castleBaseGeometry, castleMaterial);
-        castleBase.position.y = 2;
-        castleBase.castShadow = true;
-        castleBase.receiveShadow = true;
-        fort1.add(castleBase);
-        
-        // Corner towers
-        const towerPositions = [
-            [-4.5, 0, -4.5],
-            [-4.5, 0, 4.5],
-            [4.5, 0, -4.5],
-            [4.5, 0, 4.5]
-        ];
-        
-        towerPositions.forEach(pos => {
-            const towerGeometry = new THREE.CylinderGeometry(1.2, 1.5, 7, 8);
-            const tower = new THREE.Mesh(towerGeometry, castleMaterial);
-            tower.position.set(pos[0], pos[1] + 3.5, pos[2]);
-            tower.castShadow = true;
-            fort1.add(tower);
+            // Fort 1 - Medieval castle style
+            const fort1 = new THREE.Group();
             
-            // Tower roof
-            const roofGeometry = new THREE.ConeGeometry(1.3, 2, 8);
-            const roofMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xA52A2A,
-                roughness: 0.7
+            // Main castle structure
+            const castleBaseGeometry = new THREE.BoxGeometry(10, 4, 10);
+            const castleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x808080,
+                roughness: 0.9
             });
-            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-            roof.position.y = 4.5;
-            tower.add(roof);
-        });
-        
-        // Castle gate
-        const gateGeometry = new THREE.BoxGeometry(3, 3, 1);
-        const gateMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x8B4513, 
-            roughness: 0.8
-        });
-        const gate = new THREE.Mesh(gateGeometry, gateMaterial);
-        gate.position.set(0, 1.5, 5);
-        fort1.add(gate);
-        
-        // Battlements on top
-        for (let i = -4; i <= 4; i += 1) {
-            for (let j of [-4.5, 4.5]) {
-                if (i !== 0 || j !== 4.5) { // Skip where the gate is
+            const castleBase = new THREE.Mesh(castleBaseGeometry, castleMaterial);
+            castleBase.position.y = 2;
+            castleBase.castShadow = true;
+            castleBase.receiveShadow = true;
+            fort1.add(castleBase);
+            
+            // Corner towers
+            const towerPositions = [
+                [-4.5, 0, -4.5],
+                [-4.5, 0, 4.5],
+                [4.5, 0, -4.5],
+                [4.5, 0, 4.5]
+            ];
+            
+            towerPositions.forEach(pos => {
+                const towerGeometry = new THREE.CylinderGeometry(1.2, 1.5, 7, 8);
+                const tower = new THREE.Mesh(towerGeometry, castleMaterial);
+                tower.position.set(pos[0], pos[1] + 3.5, pos[2]);
+                tower.castShadow = true;
+                fort1.add(tower);
+                
+                // Tower roof
+                const roofGeometry = new THREE.ConeGeometry(1.3, 2, 8);
+                const roofMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xA52A2A,
+                    roughness: 0.7
+                });
+                const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+                roof.position.y = 4.5;
+                tower.add(roof);
+            });
+            
+            // Castle gate
+            const gateGeometry = new THREE.BoxGeometry(3, 3, 1);
+            const gateMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513, 
+                roughness: 0.8
+            });
+            const gate = new THREE.Mesh(gateGeometry, gateMaterial);
+            gate.position.set(0, 1.5, 5);
+            fort1.add(gate);
+            
+            // Battlements on top
+            for (let i = -4; i <= 4; i += 1) {
+                for (let j of [-4.5, 4.5]) {
+                    if (i !== 0 || j !== 4.5) { // Skip where the gate is
+                        const merlon = new THREE.BoxGeometry(0.7, 1, 0.7);
+                        const merlonMesh = new THREE.Mesh(merlon, castleMaterial);
+                        merlonMesh.position.set(i, 4.5, j);
+                        fort1.add(merlonMesh);
+                    }
+                }
+            }
+            
+            for (let i of [-4.5, 4.5]) {
+                for (let j = -3.5; j <= 3.5; j += 1) {
                     const merlon = new THREE.BoxGeometry(0.7, 1, 0.7);
                     const merlonMesh = new THREE.Mesh(merlon, castleMaterial);
                     merlonMesh.position.set(i, 4.5, j);
                     fort1.add(merlonMesh);
                 }
             }
-        }
-        
-        for (let i of [-4.5, 4.5]) {
-            for (let j = -3.5; j <= 3.5; j += 1) {
-                const merlon = new THREE.BoxGeometry(0.7, 1, 0.7);
-                const merlonMesh = new THREE.Mesh(merlon, castleMaterial);
-                merlonMesh.position.set(i, 4.5, j);
-                fort1.add(merlonMesh);
+            
+            // Position fort 1
+            fort1.position.set(-30, 0, -20);
+            fort1.rotation.y = Math.PI / 6; // Slight rotation
+            scene.add(fort1);
+            
+            // Fort 2 - Modern style bunker/fort
+            const fort2 = new THREE.Group();
+            
+            // Main bunker structure
+            const bunkerGeometry = new THREE.BoxGeometry(12, 3, 8);
+            const bunkerMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x5D6D7E,
+                roughness: 0.85,
+                metalness: 0.2
+            });
+            const bunker = new THREE.Mesh(bunkerGeometry, bunkerMaterial);
+            bunker.position.y = 1.5;
+            bunker.castShadow = true;
+            bunker.receiveShadow = true;
+            fort2.add(bunker);
+            
+            // Bunker dome
+            const domeGeometry = new THREE.SphereGeometry(3, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+            const domeMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x5D6D7E,
+                roughness: 0.7,
+                metalness: 0.3
+            });
+            const dome = new THREE.Mesh(domeGeometry, domeMaterial);
+            dome.position.set(0, 3, 0);
+            dome.scale.set(1.2, 1, 1.2);
+            bunker.add(dome);
+            
+            // Add antenna tower
+            const antennaBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 5, 8);
+            const antennaMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x7F8C8D,
+                metalness: 0.5
+            });
+            const antennaBase = new THREE.Mesh(antennaBaseGeometry, antennaMaterial);
+            antennaBase.position.set(3, 3, 2);
+            fort2.add(antennaBase);
+            
+            const antennaTopGeometry = new THREE.ConeGeometry(0.1, 1, 8);
+            const antennaTop = new THREE.Mesh(antennaTopGeometry, antennaMaterial);
+            antennaTop.position.y = 3;
+            antennaBase.add(antennaTop);
+            
+            // Add sandbag barriers
+            const sandbagMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xbcaaa4,
+                roughness: 1.0
+            });
+            
+            for (let i = -6; i <= 6; i += 1.5) {
+                if (i > -2 && i < 2) continue; // Leave gap for entrance
+                
+                const sandbagGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8);
+                sandbagGeometry.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+                
+                const sandbag = new THREE.Mesh(sandbagGeometry, sandbagMaterial);
+                sandbag.position.set(i, 0.4, 5);
+                sandbag.castShadow = true;
+                fort2.add(sandbag);
+                
+                // Stack a second layer on some sandbags
+                if (Math.random() > 0.5) {
+                    const sandbag2 = new THREE.Mesh(sandbagGeometry, sandbagMaterial);
+                    sandbag2.position.set(0, 0.8, 0);
+                    sandbag2.rotation.z = Math.PI / 2; // Rotate for better stacking
+                    sandbag.add(sandbag2);
+                }
             }
-        }
-        
-        // Position fort 1
-        fort1.position.set(-30, 0, -20);
-        fort1.rotation.y = Math.PI / 6; // Slight rotation
-        scene.add(fort1);
-        
-        // Fort 2 - Modern style bunker/fort
-        const fort2 = new THREE.Group();
-        
-        // Main bunker structure
-        const bunkerGeometry = new THREE.BoxGeometry(12, 3, 8);
-        const bunkerMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x5D6D7E,
-            roughness: 0.85,
-            metalness: 0.2
-        });
-        const bunker = new THREE.Mesh(bunkerGeometry, bunkerMaterial);
-        bunker.position.y = 1.5;
-        bunker.castShadow = true;
-        bunker.receiveShadow = true;
-        fort2.add(bunker);
-        
-        // Bunker dome
-        const domeGeometry = new THREE.SphereGeometry(3, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-        const domeMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x5D6D7E,
-            roughness: 0.7,
-            metalness: 0.3
-        });
-        const dome = new THREE.Mesh(domeGeometry, domeMaterial);
-        dome.position.set(0, 3, 0);
-        dome.scale.set(1.2, 1, 1.2);
-        bunker.add(dome);
-        
-        // Add antenna tower
-        const antennaBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 5, 8);
-        const antennaMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x7F8C8D,
-            metalness: 0.5
-        });
-        const antennaBase = new THREE.Mesh(antennaBaseGeometry, antennaMaterial);
-        antennaBase.position.set(3, 3, 2);
-        fort2.add(antennaBase);
-        
-        const antennaTopGeometry = new THREE.ConeGeometry(0.1, 1, 8);
-        const antennaTop = new THREE.Mesh(antennaTopGeometry, antennaMaterial);
-        antennaTop.position.y = 3;
-        antennaBase.add(antennaTop);
-        
-        // Add sandbag barriers
-        const sandbagMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xbcaaa4,
-            roughness: 1.0
-        });
-        
-        for (let i = -6; i <= 6; i += 1.5) {
-            if (i > -2 && i < 2) continue; // Leave gap for entrance
             
-            const sandbagGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 8);
-            sandbagGeometry.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+            // Add radar dish on the dome
+            const radarBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+            const radarBase = new THREE.Mesh(radarBaseGeometry, antennaMaterial);
+            radarBase.position.set(0, 3, 0);
+            dome.add(radarBase);
             
-            const sandbag = new THREE.Mesh(sandbagGeometry, sandbagMaterial);
-            sandbag.position.set(i, 0.4, 5);
-            sandbag.castShadow = true;
-            fort2.add(sandbag);
+            const radarDishGeometry = new THREE.SphereGeometry(1, 16, 16, 0, Math.PI);
+            const radarDish = new THREE.Mesh(radarDishGeometry, antennaMaterial);
+            radarDish.rotation.x = Math.PI / 2;
+            radarDish.position.y = 1;
+            radarDish.scale.set(1, 0.3, 1);
+            radarBase.add(radarDish);
             
-            // Stack a second layer on some sandbags
-            if (Math.random() > 0.5) {
-                const sandbag2 = new THREE.Mesh(sandbagGeometry, sandbagMaterial);
-                sandbag2.position.set(0, 0.8, 0);
-                sandbag2.rotation.z = Math.PI / 2; // Rotate for better stacking
-                sandbag.add(sandbag2);
+            // Position fort 2
+            fort2.position.set(35, 0, 15);
+            fort2.rotation.y = -Math.PI / 4; // Different rotation than fort 1
+            scene.add(fort2);
+            
+            // New Tower for Cannon Base
+            const cannonTower = new THREE.Group();
+            
+            // Tower base
+            const towerBaseGeometry = new THREE.CylinderGeometry(5, 6, 12, 16);
+            const towerMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B4513,
+                roughness: 0.9
+            });
+            const towerBase = new THREE.Mesh(towerBaseGeometry, towerMaterial);
+            towerBase.position.y = 6;
+            towerBase.castShadow = true;
+            towerBase.receiveShadow = true;
+            cannonTower.add(towerBase);
+            
+            // Tower stone texture details
+            const stoneCount = 20;
+            const stoneMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x696969,
+                roughness: 1.0
+            });
+            
+            for (let i = 0; i < stoneCount; i++) {
+                const stoneGeometry = new THREE.BoxGeometry(
+                    0.5 + Math.random() * 0.5,
+                    0.3 + Math.random() * 0.2,
+                    0.2
+                );
+                const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
+                
+                // Position stones in a circle around the tower
+                const angle = (Math.PI * 2 / stoneCount) * i;
+                const radius = 5.05; // Slightly larger than tower radius
+                stone.position.set(
+                    Math.cos(angle) * radius,
+                    Math.random() * 10 - 5, // Random height
+                    Math.sin(angle) * radius
+                );
+                stone.lookAt(0, stone.position.y, 0); // Orient towards center
+                cannonTower.add(stone);
             }
+            
+            // Tower battlements
+            const battlementCount = 12;
+            for (let i = 0; i < battlementCount; i++) {
+                const merlonGeometry = new THREE.BoxGeometry(1.5, 1.5, 1);
+                const merlon = new THREE.Mesh(merlonGeometry, towerMaterial);
+                
+                // Position battlements in a circle at the top
+                const angle = (Math.PI * 2 / battlementCount) * i;
+                const radius = 5; // Match tower radius
+                merlon.position.set(
+                    Math.cos(angle) * radius,
+                    12.5, // At top of tower
+                    Math.sin(angle) * radius
+                );
+                merlon.lookAt(new THREE.Vector3(0, 12.5, 0)); // Orient towards center
+                cannonTower.add(merlon);
+            }
+            
+            // Tower platform (for cannon to sit on)
+            const platformGeometry = new THREE.CylinderGeometry(4.5, 4.5, 0.5, 16);
+            const platformMaterial = new THREE.MeshStandardMaterial({
+                color: 0x505050,
+                roughness: 0.8
+            });
+            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.position.y = 12;
+            cannonTower.add(platform);
+            
+            // Tower windows
+            const windowCount = 4;
+            const windowMaterial = new THREE.MeshStandardMaterial({
+                color: 0x000000,
+                roughness: 0.5,
+                metalness: 0.3
+            });
+            
+            for (let i = 0; i < windowCount; i++) {
+                const windowGeometry = new THREE.BoxGeometry(1.5, 2, 0.5);
+                const window = new THREE.Mesh(windowGeometry, windowMaterial);
+                
+                // Position windows in a circle around the tower
+                const angle = (Math.PI * 2 / windowCount) * i;
+                const radius = 5; // Match tower radius
+                window.position.set(
+                    Math.cos(angle) * radius,
+                    6, // Middle of tower
+                    Math.sin(angle) * radius
+                );
+                window.lookAt(new THREE.Vector3(0, 6, 0)); // Orient towards center
+                cannonTower.add(window);
+            }
+            
+            // Tower door
+            const doorGeometry = new THREE.BoxGeometry(2, 3, 0.5);
+            const doorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4B3621,
+                roughness: 0.9
+            });
+            const door = new THREE.Mesh(doorGeometry, doorMaterial);
+            door.position.set(0, 1.5, 5);
+            door.lookAt(new THREE.Vector3(0, 1.5, 0)); // Orient towards center
+            cannonTower.add(door);
+            
+            // Position cannon tower at origin
+            cannonTower.position.set(0, 0, 0);
+            scene.add(cannonTower);
+            
+            // Return the platform position for the cannon
+            return { cannonTowerTop: new THREE.Vector3(0, 12.5, 0) };
         }
-        
-        // Add radar dish on the dome
-        const radarBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
-        const radarBase = new THREE.Mesh(radarBaseGeometry, antennaMaterial);
-        radarBase.position.set(0, 3, 0);
-        dome.add(radarBase);
-        
-        const radarDishGeometry = new THREE.SphereGeometry(1, 16, 16, 0, Math.PI);
-        const radarDish = new THREE.Mesh(radarDishGeometry, antennaMaterial);
-        radarDish.rotation.x = Math.PI / 2;
-        radarDish.position.y = 1;
-        radarDish.scale.set(1, 0.3, 1);
-        radarBase.add(radarDish);
-        
-        // Position fort 2
-        fort2.position.set(35, 0, 15);
-        fort2.rotation.y = -Math.PI / 4; // Different rotation than fort 1
-        scene.add(fort2);
-    }
 
-    createForts();
+        const fortPositions = createForts();
+
+        // Position the launcher on top of the tower
+        launcherGroup.position.copy(fortPositions.cannonTowerTop);
         // Castle End
 
         // Create cannon/launcher
